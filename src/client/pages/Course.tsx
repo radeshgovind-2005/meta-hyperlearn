@@ -12,7 +12,7 @@ import { Skeleton, Working } from "../components/Working";
 import { ShareDialog } from "../components/ShareDialog";
 import { Speaker } from "../components/Icons";
 import { useConfig } from "../main";
-import { utterance } from "../lib/speech";
+import { prepareVoice, speak, stopSpeaking } from "../lib/speech";
 
 export type OutlineSection = { id: string; title: string; chapter: string; concept: string; origin: string; read: boolean; minutes: number };
 export type CourseResp = {
@@ -75,6 +75,8 @@ export function CoursePage() {
   const listenRef = useRef(listen);
   listenRef.current = listen;
   const listenPos = useRef(0);
+  const [voiceLoad, setVoiceLoad] = useState<number | null>(null);
+  const [neural, setNeural] = useState(false);
   const script = useRef<{ blockId: string; text: string }[]>([]);
   const [micTrigger, setMicTrigger] = useState(0);
   const [practiceBusy, setPracticeBusy] = useState(false);
@@ -93,7 +95,7 @@ export function CoursePage() {
   useEffect(() => {
     setSelected(null);
     setMut({ stage: "idle" });
-    window.speechSynthesis?.cancel();
+    stopSpeaking();
     setListening(null);
     setListen("off");
   }, [sectionId]);
@@ -210,33 +212,34 @@ export function CoursePage() {
     [courseId, sectionId, outline.data, section, selected, startMutation],
   );
 
-  // Listen: Muse Spark writes the spoken script (maths read aloud properly), the browser voice reads it
+  // Listen: Muse Spark writes the spoken script (maths read aloud properly), Kokoro reads it on the device
   const speakFrom = (i: number, segs: { blockId: string; text: string }[]) => {
-    const synth = window.speechSynthesis;
     if (i >= segs.length) {
       setListen("off");
       setListening(null);
       return;
     }
     listenPos.current = i;
-    const u = utterance(segs[i].text);
-    u.onstart = () => setListening(segs[i].blockId);
-    u.onend = () => listenRef.current === "playing" && speakFrom(i + 1, segs);
-    u.onerror = () => undefined;
-    synth.speak(u);
+    speak(segs[i].text, {
+      onStart: () => setListening(segs[i].blockId),
+      onEnd: () => listenRef.current === "playing" && speakFrom(i + 1, segs),
+    });
   };
 
   const toggleListen = async () => {
-    const synth = window.speechSynthesis;
-    if (!synth || !section) return;
+    if (!section) return;
     if (listen !== "off") {
       listenRef.current = "off";
-      synth.cancel();
+      stopSpeaking();
       setListen("off");
       setListening(null);
       return;
     }
     setListen("preparing");
+    listenRef.current = "preparing";
+    setVoiceLoad(null);
+    // the voice downloads once (then it is cached) while Muse Spark writes the script
+    const voice = prepareVoice((pct) => setVoiceLoad(pct));
     let segs: { blockId: string; text: string }[];
     try {
       segs = (await api<{ segments: { blockId: string; text: string }[] }>(`/api/courses/${courseId}/sections/${sectionId}/listen`, { body: {} })).segments;
@@ -245,8 +248,9 @@ export function CoursePage() {
       // the raw text still works if the script cannot be written
       segs = section.blocks.filter((b): b is Extract<Block, { kind: "text" }> => b.kind === "text").map((b) => ({ blockId: b.id, text: b.md.replace(/[*_`$]/g, "") }));
     }
+    setNeural(await voice);
+    if (listenRef.current !== "preparing") return; // stopped or left the section meanwhile
     script.current = segs;
-    synth.cancel();
     setListen("playing");
     listenRef.current = "playing";
     speakFrom(0, segs);
@@ -254,13 +258,12 @@ export function CoursePage() {
 
   const pauseListen = () => {
     listenRef.current = "paused";
-    window.speechSynthesis.cancel();
+    stopSpeaking();
     setListen("paused");
   };
   const resumeListen = () => {
     listenRef.current = "playing";
     setListen("playing");
-    window.speechSynthesis.cancel();
     speakFrom(listenPos.current, script.current);
   };
   const askByVoice = () => {
@@ -358,7 +361,7 @@ export function CoursePage() {
             <div className="row" style={{ gap: 16 }}>
               <button type="button" className="link-btn" onClick={() => void toggleListen()} aria-pressed={listen !== "off"} disabled={listen === "preparing"}>
                 <span className="row" style={{ gap: 6 }}>
-                  {listen === "preparing" ? <span className="spinner" /> : <Speaker color="#0A5CFF" />} {listen === "preparing" ? "Preparing narration" : listen === "off" ? "Listen" : "Stop"}
+                  {listen === "preparing" ? <span className="spinner" /> : <Speaker color="#0A5CFF" />} {listen === "preparing" ? (voiceLoad !== null && voiceLoad < 100 ? `Downloading voice ${voiceLoad}%` : "Preparing narration") : listen === "off" ? "Listen" : "Stop"}
                 </span>
               </button>
               <Link to={`/courses/${courseId}/history`} style={{ fontSize: 14, fontWeight: 500, textDecoration: "none" }}>History</Link>
@@ -368,7 +371,7 @@ export function CoursePage() {
           <h1>{shownSection?.title ?? current?.title ?? ""}</h1>
           {(listen === "playing" || listen === "paused") && (
             <div className="listen-bar" role="group" aria-label="Listen controls">
-              <span className="small muted">{listen === "playing" ? "Reading aloud · script by Muse Spark" : "Paused"}</span>
+              <span className="small muted">{listen === "playing" ? `Reading aloud · script by Muse Spark · ${neural ? "Kokoro voice on this device" : "browser voice"}` : "Paused"}</span>
               {listen === "playing" ? <button type="button" className="btn btn-sm" onClick={pauseListen}>Pause</button> : <button type="button" className="btn btn-sm" onClick={resumeListen}>Resume</button>}
               <button type="button" className="btn btn-sm btn-primary" onClick={askByVoice}>Ask by voice</button>
             </div>

@@ -6,7 +6,7 @@ import { runAction, type TutorResult } from "../lib/actions";
 import { startVoice, type VoiceSession } from "../lib/voice";
 import { ArrowUp, Close, Mic } from "./Icons";
 import { Md } from "./Md";
-import { utterance } from "../lib/speech";
+import { speak } from "../lib/speech";
 
 /** The "Ask, or tell HyperLearn what to do" bar, pinned to the bottom of every screen. */
 export function CommandBar({ placeholder, micTrigger = 0, speakAnswers = false, onAnswered }: { placeholder?: string; micTrigger?: number; speakAnswers?: boolean; onAnswered?: () => void }) {
@@ -30,12 +30,8 @@ export function CommandBar({ placeholder, micTrigger = 0, speakAnswers = false, 
       if (r.kind === "answer") {
         setAnswer(r);
         // in Listen mode the answer is spoken too, so the student can keep their eyes off the screen
-        if (speakAnswers && window.speechSynthesis) {
-          const u = utterance(r.md.replace(/\[\^?\d+\]|[*_`$#>]/g, ""));
-          u.onend = () => onAnswered?.();
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.speak(u);
-        } else onAnswered?.();
+        if (speakAnswers) speak(r.md.replace(/\[\^?\d+\]|[*_`$#>]/g, ""), { onEnd: () => onAnswered?.() });
+        else onAnswered?.();
       } else {
         setNote(await runAction(r, pageContext, navigate, toast));
         onAnswered?.();

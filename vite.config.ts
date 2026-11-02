@@ -8,4 +8,6 @@ export default defineConfig({
   plugins: [react(), cloudflare({ remoteBindings: !process.env.LOCAL_ONLY })],
   resolve: { alias: { "@shared": fileURLToPath(new URL("./src/shared", import.meta.url)) } },
   server: { port: 5173 },
+  // the Listen voice worker (Kokoro) code-splits, which needs ES module workers
+  worker: { format: "es" },
 });
