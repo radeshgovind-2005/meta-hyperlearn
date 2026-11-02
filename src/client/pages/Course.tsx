@@ -12,6 +12,7 @@ import { Skeleton, Working } from "../components/Working";
 import { ShareDialog } from "../components/ShareDialog";
 import { Speaker } from "../components/Icons";
 import { useConfig } from "../main";
+import { utterance } from "../lib/speech";
 
 export type OutlineSection = { id: string; title: string; chapter: string; concept: string; origin: string; read: boolean; minutes: number };
 export type CourseResp = {
@@ -218,7 +219,7 @@ export function CoursePage() {
       return;
     }
     listenPos.current = i;
-    const u = new SpeechSynthesisUtterance(segs[i].text);
+    const u = utterance(segs[i].text);
     u.onstart = () => setListening(segs[i].blockId);
     u.onend = () => listenRef.current === "playing" && speakFrom(i + 1, segs);
     u.onerror = () => undefined;

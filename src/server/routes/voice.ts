@@ -22,13 +22,25 @@ export const voice = new Hono<AppEnv>().get("/realtime", async (c) => {
   const upstream = up.webSocket;
   if (!upstream) return c.json({ error: `Could not reach the transcription service (${up.status})` }, 502);
   upstream.accept();
-  upstream.send(JSON.stringify({ authorization: { accessToken: `Bearer ${ctx.apiKey}` }, model: MODELS.transcribe, format: "PCM_16KHZ" }));
+  // handshake: the key goes in the first frame (the Authorization header is ignored here)
+  upstream.send(JSON.stringify({
+    authorization: { accessToken: `Bearer ${ctx.apiKey}` },
+    model: MODELS.transcribe,
+    audioEncoding: "PCM_16KHZ",
+    mode: "PUSH_TO_TALK",
+    partialMode: "CUMULATIVE",
+    emitAudioProgress: false,
+  }));
 
   const pair = new WebSocketPair();
   const client = pair[1];
   client.accept();
   let bytes = 0;
   let closed = false;
+  // audio may not be sent until Meta acknowledges the handshake with { sessionId }
+  let ready = false;
+  let pending: (ArrayBuffer | string)[] = [];
+  const toUpstream = (d: ArrayBuffer | string) => (ready ? upstream.send(d) : void pending.push(d));
   const close = async () => {
     if (closed) return;
     closed = true;
@@ -39,15 +51,22 @@ export const voice = new Hono<AppEnv>().get("/realtime", async (c) => {
   };
   client.addEventListener("message", (e) => {
     if (typeof e.data === "string") {
-      if (e.data.includes("endStream")) upstream.send(JSON.stringify({ type: "endStream" }));
+      if (e.data.includes("endStream")) toUpstream(JSON.stringify({ type: "endStream" }));
       return;
     }
     bytes += (e.data as ArrayBuffer).byteLength;
     if (bytes > 32000 * 120) return void close(); // 2 minutes max per utterance
-    upstream.send(e.data as ArrayBuffer);
+    toUpstream(e.data as ArrayBuffer);
   });
   upstream.addEventListener("message", (e) => {
-    if (typeof e.data === "string") client.send(e.data);
+    if (typeof e.data !== "string") return;
+    if (!ready && !e.data.includes('"type"') && e.data.includes("sessionId")) {
+      ready = true;
+      pending.forEach((d) => upstream.send(d));
+      pending = [];
+      return;
+    }
+    client.send(e.data);
   });
   client.addEventListener("close", () => void close());
   upstream.addEventListener("close", () => void close());
