@@ -6,6 +6,7 @@ import { Plot } from "../widgets/Plot";
 import { Stepper } from "../widgets/Stepper";
 import { CustomWidget } from "../widgets/CustomWidget";
 import { fmtTime } from "../lib/hooks";
+import { examLabel, stripQuestionNumber } from "../lib/format";
 
 export type SourceInfo = { id: string; filename: string; kind: string; title: string; fileUrl: string; pageUrls: Record<number, string>; pageSizes: [number, number][] };
 
@@ -65,9 +66,9 @@ export function WidgetCard({ block, sources, widgetsOrigin }: { block: Extract<B
 export function ExerciseCard({ block, styleName }: { block: Extract<Block, { kind: "exercise" }>; styleName?: string }) {
   return (
     <section className="exercise" aria-label="Exercise">
-      <p className="label-caps">Try it{styleName ? ` · in the style of ${styleName.replace(/\.pdf$/i, "")}` : ""}</p>
+      <p className="label-caps">Try it{styleName ? ` · in the style of ${examLabel(styleName)}` : ""}</p>
       <p className="q">
-        <Md text={block.prompt} />
+        <Md text={stripQuestionNumber(block.prompt)} />
       </p>
       <details>
         <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 500, color: "var(--primary)" }}>Show worked answer</summary>

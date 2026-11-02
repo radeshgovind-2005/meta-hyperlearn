@@ -48,7 +48,7 @@ export async function answerFromSources(env: Env, userId: string, question: stri
     reasoningEffort: "low",
     maxTokens: 1200,
     messages: [
-      { role: "system", content: `Answer the student's question in 2–5 plain sentences using only the chunks. After each sentence put the chunk number(s) it uses in square brackets, like [1] or [1,3]. If the chunks don't answer it, say so in one sentence. ${DATA_RULE}` },
+      { role: "system", content: `Answer the student's question in 2–5 plain sentences using only the chunks. After each sentence put the chunk number(s) it uses in square brackets, like [1] or [1,3]. If they don't answer it, say in one sentence that the student's sources don't cover this and that they can ask HyperLearn to research it. Never mention "chunks". ${DATA_RULE}` },
       { role: "user", content: `Question: ${question}\n\n${asData("chunks", chunks.map((c, k) => `[${k + 1}] (${label(c)})\n${c.text}`).join("\n\n"))}` },
     ],
   });

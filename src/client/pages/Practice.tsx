@@ -6,6 +6,7 @@ import { Md } from "../components/Md";
 import { api, streamEvents } from "../lib/api";
 import { formatDate, useApi } from "../lib/hooks";
 import { useApp, usePageContext } from "../lib/app";
+import { examLabel, stripQuestionNumber } from "../lib/format";
 
 type Q = { id: string; ord: number; prompt: string; answer: string | null; concept: string; section_id: string | null; cites: { sourceId: string; page?: number }[] };
 type Attempt = { id: string; question_id: string; answer: string; correct: number; feedback: string };
@@ -97,7 +98,7 @@ export function PracticePage() {
   if (!d) return <Shell><p className="muted">Loading…</p></Shell>;
   const q = d.questions[idx];
   const total = d.questions.length;
-  const examName = d.examName?.replace(/\.pdf$/i, "");
+  const examName = d.examName ? examLabel(d.examName) : undefined;
 
   const submit = async () => {
     setGrading(true);
@@ -182,7 +183,7 @@ export function PracticePage() {
             {q && (
               <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <p className="small muted">Question {idx + 1}{examName ? ` · in the style of ${examName}` : ""}</p>
-                <p className="serif" style={{ fontSize: 22, lineHeight: 1.5 }}><Md text={q.prompt} /></p>
+                <p className="serif" style={{ fontSize: 22, lineHeight: 1.5 }}><Md text={stripQuestionNumber(q.prompt)} /></p>
               </section>
             )}
             {!grade ? (
@@ -251,7 +252,7 @@ export function PracticePage() {
               {replan.status === "failed" && <li className="err-text small">{replan.message}</li>}
             </ol>
           )}
-          {replan && <p className="small muted" style={{ marginTop: "auto" }}>muse-spark-1.3 · muse-wonder-1.0 · open-weight verifier</p>}
+          {replan && <p className="small muted" style={{ marginTop: "auto" }}>muse-spark-1.3 · muse-wonder-1.0</p>}
         </aside>
       </div>
     </div>
@@ -284,14 +285,14 @@ export function ResultsPage() {
         <div style={{ width: "100%", maxWidth: 720, display: "flex", flexDirection: "column", gap: 24 }}>
           <div>
             <h1 style={{ fontSize: 32, fontWeight: 600 }}>{correct} of {d.items.length} correct</h1>
-            <p className="muted">{d.session.chapter ?? "Whole course"}{d.examName ? ` · in the style of ${d.examName.replace(/\.pdf$/i, "")}` : ""} · {d.minutes} minutes</p>
+            <p className="muted">{d.session.chapter ?? "Whole course"}{d.examName ? ` · in the style of ${examLabel(d.examName)}` : ""} · {d.minutes} minutes</p>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             {d.items.map((it, i) => (
               <div key={it.id} className="row" style={{ padding: "14px 0", borderBottom: "1px solid var(--row)", flexWrap: "nowrap", alignItems: "flex-start" }}>
                 <span className="muted" style={{ width: 24 }}>{i + 1}</span>
                 <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: 15 }}>{it.prompt.length > 110 ? `${it.prompt.slice(0, 110)}…` : it.prompt}</span>
+                  <span style={{ fontSize: 15 }}>{(() => { const p = stripQuestionNumber(it.prompt); return p.length > 110 ? `${p.slice(0, 110)}…` : p; })()}</span>
                   {it.correct === 0 && it.feedback && <p className="small muted">{it.feedback}</p>}
                 </div>
                 <span className="small" style={{ color: it.correct === 1 ? "var(--success)" : it.correct === 0 ? "var(--warning)" : "var(--muted)", whiteSpace: "nowrap" }}>{it.correct === 1 ? "Correct" : it.correct === 0 ? "Not quite" : "Skipped"}</span>

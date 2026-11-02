@@ -98,6 +98,8 @@ export const courses = new Hono<AppEnv>()
     const read = new Set(reads.map((r) => r.section_id));
     const { results: changes } = await c.env.DB.prepare("SELECT version, kind, summary, author_id, created_at FROM course_versions WHERE course_id = ? AND version > 1 ORDER BY version DESC LIMIT 3").bind(course.id).all();
     const { results: srcs } = await c.env.DB.prepare("SELECT s.id, s.filename, s.kind FROM sources s JOIN course_sources cs ON cs.source_id = s.id WHERE cs.course_id = ?").bind(course.id).all();
+    const { results: own } = await c.env.DB.prepare("SELECT section_id, title, updated_at FROM overlays WHERE user_id = ? AND course_id = ? ORDER BY updated_at DESC LIMIT 5").bind(userId, course.id).all<{ section_id: string; title: string; updated_at: number }>();
+    const ownChanges = own.map((o) => ({ label: o.section_id === "__path__" ? "Re-planned your path after practice" : `Changed ${o.title}`, updated_at: o.updated_at }));
     const versionRows = await c.env.DB.prepare("SELECT created_at FROM course_versions WHERE course_id = ? AND version = ?").bind(course.id, view.version).first<number>("created_at");
     return c.json({
       course,
@@ -108,6 +110,7 @@ export const courses = new Hono<AppEnv>()
       sources: srcs,
       sections: sections.map((s) => ({ ...s, read: read.has(s.id), minutes: Math.max(2, Math.round(s.blocks * 1.2)) })),
       changes,
+      ownChanges,
     });
   })
   .get("/:id/sections/:sid", async (c) => {

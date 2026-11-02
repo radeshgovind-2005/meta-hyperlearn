@@ -7,7 +7,7 @@ import { formatDate, useApi, usePoll } from "../lib/hooks";
 import { useApp, usePageContext } from "../lib/app";
 import { numberSections, type CourseResp, type OutlineSection } from "./Course";
 
-type Resp = CourseResp & { changes: { version: number; kind: string; summary: string; created_at: number; author_id: string }[]; course: CourseResp["course"] & { progress: string | null; description: string | null } };
+type Resp = CourseResp & { ownChanges?: { label: string; updated_at: number }[]; changes: { version: number; kind: string; summary: string; created_at: number; author_id: string }[]; course: CourseResp["course"] & { progress: string | null; description: string | null } };
 
 export function OutlinePage() {
   const { courseId = "" } = useParams();
@@ -16,6 +16,7 @@ export function OutlinePage() {
   const { toast, reloadCourses } = useApp();
   const r = useApi<Resp>(`/api/courses/${courseId}`);
   const [share, setShare] = useState(params.get("share") === "1");
+  const [practiceBusy, setPracticeBusy] = useState(false);
   const building = r.data?.course.status === "building";
   usePoll(() => {
     void r.reload();
@@ -54,12 +55,13 @@ export function OutlinePage() {
   const isCopy = d.role === "owner" && d.course.forked_from;
 
   const practice = async () => {
-    toast("Writing exam-style questions…");
+    setPracticeBusy(true);
     try {
       const s = await api<{ id: string }>("/api/practice", { body: { courseId, chapter: next?.chapter, count: 5 } });
       navigate(`/practice/${s.id}`);
     } catch (e) {
       toast((e as Error).message);
+      setPracticeBusy(false);
     }
   };
 
@@ -76,7 +78,9 @@ export function OutlinePage() {
           </div>
           <div className="row">
             {next && <Link to={`/courses/${courseId}/s/${next.id}`} className="btn btn-primary">{next.read ? "Start" : "Continue"} {numbers.get(next.id) ?? ""} {next.title}</Link>}
-            <button type="button" className="btn" onClick={() => void practice()}>Practice</button>
+            <button type="button" className="btn" onClick={() => void practice()} disabled={practiceBusy} aria-busy={practiceBusy}>
+              {practiceBusy ? <><span className="spinner" /> Writing questions…</> : "Practice"}
+            </button>
             {d.role === "owner" && next && <Link to={`/courses/${courseId}/s/${next.id}/edit`} className="btn">Edit</Link>}
             <button type="button" className="btn" onClick={() => setShare(true)}>Share</button>
             {(isCopy || d.role === "follower") && <Link to={`/courses/${courseId}/updates`} className="btn">Updates</Link>}
@@ -107,7 +111,14 @@ export function OutlinePage() {
         </div>
         <aside aria-label="Recent changes" style={{ flex: "1 1 240px", maxWidth: 300, display: "flex", flexDirection: "column", gap: 14, paddingTop: 8 }}>
           <h2 className="section-title">Recent changes</h2>
-          {d.changes.length === 0 && <p className="small muted">No changes yet. Select any paragraph in a section and say what you need.</p>}
+          {(d.ownChanges ?? []).map((o) => (
+            <div key={o.label} style={{ fontSize: 14, lineHeight: 1.5, color: "var(--body)" }}>
+              <span style={{ color: "var(--ink)", fontWeight: 500 }}>{o.label}</span>
+              <br />
+              <span className="small muted">Your change · {formatDate(o.updated_at)}</span>
+            </div>
+          ))}
+          {d.changes.length === 0 && !d.ownChanges?.length && <p className="small muted">No changes yet. Select any paragraph in a section and say what you need.</p>}
           {d.changes.map((c) => (
             <div key={c.version} style={{ fontSize: 14, lineHeight: 1.5, color: "var(--body)" }}>
               <span style={{ color: "var(--ink)", fontWeight: 500 }}>{c.summary}</span>

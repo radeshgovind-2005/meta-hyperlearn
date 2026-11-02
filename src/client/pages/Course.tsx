@@ -77,6 +77,7 @@ export function CoursePage() {
   const [mut, setMut] = useState<MutState>({ stage: "idle" });
   const [share, setShare] = useState(false);
   const [listening, setListening] = useState<string | null>(null);
+  const [practiceBusy, setPracticeBusy] = useState(false);
   const mutRef = useRef(mut);
   mutRef.current = mut;
 
@@ -261,6 +262,21 @@ export function CoursePage() {
   const blocks = shownSection?.blocks ?? [];
   const selBlock = blocks.find((b) => b.id === selected) ?? section?.blocks.find((b) => b.id === selected);
   const paneCites: Cite[] = selBlock?.cites ?? blocks.find((b) => b.kind === "text")?.cites ?? [];
+  // Keep / Undo sit right under the change (the last changed block), as in the design
+  const changedIds = mut.stage === "review" || mut.stage === "saving" || mut.stage === "kept" ? mut.changedIds : [];
+  const decisionAnchor = [...blocks].reverse().find((b) => changedIds.includes(b.id))?.id ?? (mut.stage === "review" ? mut.blockId : undefined);
+  const Decision = () =>
+    mut.stage === "review" ? (
+      <div className="row" style={{ gap: 12 }}>
+        <button type="button" className="btn btn-dark" onClick={() => void decide("keep")}>Keep</button>
+        <button type="button" className="btn" onClick={() => void decide("undo")}>Undo</button>
+        <button type="button" className="link-btn" onClick={() => void decide("undo", true)}>Try another way</button>
+      </div>
+    ) : mut.stage === "saving" ? (
+      <p className="small muted">Saving…</p>
+    ) : mut.stage === "kept" ? (
+      <p style={{ fontSize: 14, color: "var(--success)" }}>{mut.message}</p>
+    ) : null;
   const changed = (id: string) => (mut.stage === "review" || mut.stage === "saving" || mut.stage === "kept") && mut.changedIds.includes(id);
   const chapterOf = current?.chapter;
   const chapterSections = (outline.data?.sections ?? []).filter((s) => s.chapter === chapterOf);
@@ -292,17 +308,23 @@ export function CoursePage() {
           className="link-btn"
           style={{ marginTop: "auto", minHeight: 40, padding: "0 10px", textAlign: "left", fontWeight: 600 }}
           onClick={async () => {
-            toast("Writing exam-style questions…");
+            setPracticeBusy(true);
             try {
               const s = await api<{ id: string }>("/api/practice", { body: { courseId, chapter: chapterOf, count: 5 } });
               navigate(`/practice/${s.id}`);
             } catch (e) {
               toast((e as Error).message);
+              setPracticeBusy(false);
             }
           }}
-          disabled={!chapterSections.length}
+          disabled={!chapterSections.length || practiceBusy}
+          aria-busy={practiceBusy}
         >
-          Practice this chapter
+          {practiceBusy ? (
+            <span className="row" style={{ gap: 8 }}><span className="spinner" />Writing exam-style questions…</span>
+          ) : (
+            "Practice this chapter"
+          )}
         </button>
       </nav>
 
@@ -397,19 +419,11 @@ export function CoursePage() {
                 )}
                 {showForm && <MutateForm initial={mut.request} onCancel={() => setMut({ stage: "idle" })} onRun={(r) => void startMutation(b.id, r)} />}
                 {working && <div className="placeholder-box">{mut.stage === "working" && mut.steps.findIndex((s) => s.status === "active") >= 3 ? "Building the interactive example…" : "Rewriting…"}</div>}
+                {b.id === decisionAnchor && <Decision />}
               </div>
             );
           })}
-
-          {mut.stage === "review" && (
-            <div className="row" style={{ gap: 12 }}>
-              <button type="button" className="btn btn-dark" onClick={() => void decide("keep")}>Keep</button>
-              <button type="button" className="btn" onClick={() => void decide("undo")}>Undo</button>
-              <button type="button" className="link-btn" onClick={() => void decide("undo", true)}>Try another way</button>
-            </div>
-          )}
-          {mut.stage === "saving" && <p className="small muted">Saving…</p>}
-          {mut.stage === "kept" && <p style={{ fontSize: 14, color: "var(--success)" }}>{mut.message}</p>}
+          {!decisionAnchor && <Decision />}
         </article>
 
         <CommandBar />
