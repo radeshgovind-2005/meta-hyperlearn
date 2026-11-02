@@ -211,10 +211,28 @@ function redactImages(messages: ChatMessage[]) {
   );
 }
 
-/** Checks a key by listing models; returns false on 401. */
-export async function verifyMetaKey(baseUrl: string, apiKey: string): Promise<{ ok: boolean; status: number }> {
+/** Cleans a pasted key: quotes, "Bearer ", "NAME=" prefixes and any whitespace. */
+export function cleanApiKey(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^[A-Z_]+\s*=\s*/, "")
+    .replace(/^Bearer\s+/i, "")
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/\s+/g, "");
+}
+
+/** Checks a key by listing models; returns Meta's own error message when it fails. */
+export async function verifyMetaKey(baseUrl: string, apiKey: string): Promise<{ ok: boolean; status: number; message?: string }> {
   const res = await fetch(`${baseUrl}/models`, { headers: { Authorization: `Bearer ${apiKey}` } });
-  return { ok: res.ok, status: res.status };
+  if (res.ok) return { ok: true, status: res.status };
+  let message: string | undefined;
+  try {
+    const j = (await res.json()) as { error?: { message?: string; code?: string } | string; message?: string };
+    message = typeof j.error === "string" ? j.error : (j.error?.message ?? j.message);
+  } catch {
+    message = undefined;
+  }
+  return { ok: false, status: res.status, message };
 }
 
 /** Wraps untrusted document text so the model treats it as data. */

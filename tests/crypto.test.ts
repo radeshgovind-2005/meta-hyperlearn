@@ -23,3 +23,12 @@ describe("key encryption", () => {
     await expect(encryptSecret("k", btoa("short"), "u")).rejects.toThrow(/32 bytes/);
   });
 });
+
+import { cleanApiKey } from "../src/server/ai/meta";
+describe("cleanApiKey", () => {
+  it("strips quotes, prefixes and whitespace", () => {
+    expect(cleanApiKey(' "sk-abc123def"\n')).toBe("sk-abc123def");
+    expect(cleanApiKey("META_API_KEY=sk-abc 123")).toBe("sk-abc123");
+    expect(cleanApiKey("Bearer sk-abc123")).toBe("sk-abc123");
+  });
+});

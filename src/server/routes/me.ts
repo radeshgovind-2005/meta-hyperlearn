@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../env";
 import { encryptSecret } from "../lib/crypto";
-import { verifyMetaKey } from "../ai/meta";
+import { cleanApiKey, verifyMetaKey } from "../ai/meta";
 import { quotaStatus } from "../lib/quota";
 
 const month = () => new Date().toISOString().slice(0, 7);
@@ -31,15 +31,21 @@ export const me = new Hono<AppEnv>()
   })
   .post("/key/verify", async (c) => {
     const { key } = z.object({ key: z.string().min(8).max(400) }).parse(await c.req.json());
-    const r = await verifyMetaKey(c.env.META_BASE_URL, key.trim());
+    const r = await verifyMetaKey(c.env.META_BASE_URL, cleanApiKey(key));
     return c.json({ ok: r.ok, status: r.status });
   })
   .put("/key", async (c) => {
     const userId = c.get("userId");
     const { key } = z.object({ key: z.string().min(8).max(400) }).parse(await c.req.json());
-    const k = key.trim();
+    const k = cleanApiKey(key);
+    if (k.length < 8) return c.json({ error: "That doesn't look like an API key." }, 400);
     const r = await verifyMetaKey(c.env.META_BASE_URL, k);
-    if (!r.ok) return c.json({ error: r.status === 401 || r.status === 403 ? "That key was rejected by the Meta Model API." : `Could not verify the key (status ${r.status}).` }, 400);
+    if (!r.ok) {
+      const why = r.message ? ` The Meta Model API said: "${r.message}".` : "";
+      const msg = r.status === 401 || r.status === 403 ? `That key was rejected by the Meta Model API.${why}` : `Could not verify the key (status ${r.status}).${why}`;
+      console.warn("key verify failed", r.status, r.message, `len=${k.length}`, `prefix=${k.slice(0, 4)}`);
+      return c.json({ error: msg }, 400);
+    }
     const { ciphertext, iv } = await encryptSecret(k, c.env.KEY_ENCRYPTION_KEY, userId);
     await c.env.DB.prepare(
       "INSERT INTO api_keys (user_id, ciphertext, iv, last4, verified_at, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET ciphertext = excluded.ciphertext, iv = excluded.iv, last4 = excluded.last4, verified_at = excluded.verified_at",
