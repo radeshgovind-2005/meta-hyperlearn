@@ -5,6 +5,7 @@ import { base64ToBytes, generateImage, parseImagesResponse } from "../src/server
 import { brief, makeIllustration, storeImage, textOf } from "../src/server/course/illustrate";
 import { canIllustrate, heroOf, withHero, type FigureBlock } from "../src/shared/hero";
 import { applyPatch } from "../src/shared/patch";
+import { applyPictureHints } from "../src/server/graphs/mutate";
 import type { Block } from "../src/shared/types";
 
 const bindings = env as unknown as { FILES: R2Bucket };
@@ -145,5 +146,23 @@ describe("makeIllustration", () => {
   it("stores identical pictures once", async () => {
     const img = parseImagesResponse({ data: [{ b64_json: PIXEL }] });
     expect(await storeImage(appEnv, img)).toBe(await storeImage(appEnv, img));
+  });
+});
+
+describe("picture requests", () => {
+  const base = { simplify: false, addWidget: false, moreExamples: false, examFocus: false, analogy: false, addImage: false, tooComplex: false, rewrite: false, notes: "" };
+
+  it("treats 'draw an analogy' as a picture, not a rewrite", () => {
+    const out = applyPictureHints({ ...base, analogy: true, rewrite: true }, "Draw an everyday analogy for this idea.", "text");
+    expect(out).toMatchObject({ addImage: true, analogy: false, rewrite: false });
+  });
+
+  it("redraws whenever a picture is selected", () => {
+    expect(applyPictureHints({ ...base, simplify: true }, "make it clearer", "figure").addImage).toBe(true);
+  });
+
+  it("leaves ordinary text requests and interactive examples alone", () => {
+    expect(applyPictureHints({ ...base, simplify: true }, "This is too complex. Simplify it.", "text").addImage).toBe(false);
+    expect(applyPictureHints({ ...base, addWidget: true }, "Give me an interactive example with a picture", "text")).toMatchObject({ addWidget: true, addImage: false });
   });
 });

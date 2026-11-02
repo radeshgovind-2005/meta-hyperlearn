@@ -41,7 +41,7 @@ const IntentSchema = z.object({
   rewrite: z.boolean().describe("the selected text itself should be rewritten"),
   notes: z.string().describe("anything else the student asked for, in a few words"),
 });
-type Intent = z.infer<typeof IntentSchema>;
+export type Intent = z.infer<typeof IntentSchema>;
 
 const TextOutSchema = z.object({
   paragraphs: z.array(z.object({ md: z.string(), chunkIds: z.array(z.string()) })),
@@ -126,6 +126,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
       ],
     });
     // a widget request on a non-text block still needs text left alone
+    applyPictureHints(intent, s.request, selected(s)?.kind);
     if (!intent.rewrite && !intent.addWidget && !intent.moreExamples && !intent.addImage) intent.rewrite = true;
     await trace(s, `Read the request as: ${describeIntent(intent)}`, MODELS.spark);
     step(s, 0, "done", describeIntent(intent));
@@ -488,6 +489,22 @@ function blockText(b: Block): string {
   if (b.kind === "exercise") return `${b.prompt}\nAnswer: ${b.answer}`;
   if (b.kind === "figure") return b.caption;
   return b.spec.title ?? b.spec.template;
+}
+
+const PICTURE_WORDS = /\b(draw|drawing|sketch|picture|illustrat\w*|diagram|image|redraw)\b/i;
+
+/**
+ * The classifier is a model; these cases must not depend on it. Asking to draw something, or asking
+ * anything of a picture, means a new picture and leaves the paragraph's words alone.
+ */
+export function applyPictureHints(intent: Intent, request: string, kind: Block["kind"] | undefined): Intent {
+  if (kind === "figure" || (PICTURE_WORDS.test(request) && !intent.addWidget)) {
+    intent.addImage = true;
+    intent.addWidget = false;
+    intent.rewrite = false;
+    intent.analogy = false;
+  }
+  return intent;
 }
 
 function describeIntent(i: Intent): string {
