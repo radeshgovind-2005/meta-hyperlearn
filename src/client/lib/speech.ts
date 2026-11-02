@@ -14,7 +14,9 @@ let worker: Worker | null = null;
 let ready: Promise<boolean> | null = null;
 let nextId = 1;
 const waiting = new Map<number, { resolve: (c: Clip) => void; reject: (e: Error) => void }>();
-const progress = new Set<(pct: number) => void>();
+const status = new Set<(label: string) => void>();
+/** A loading step that sends nothing for this long is treated as stuck (Safari can hang in WebGPU setup). */
+const STALL_MS = 20_000;
 let audio: AudioContext | null = null;
 
 function send(m: TtsIn) {
@@ -24,22 +26,45 @@ function send(m: TtsIn) {
 /**
  * Starts loading the neural voice (call it from a click so audio is allowed to play).
  * Resolves true when it can speak, false when the browser voice has to be used.
+ * onStatus gets a short label for the current loading step.
  */
-export function prepareVoice(onProgress?: (pct: number) => void): Promise<boolean> {
+export function prepareVoice(onStatus?: (label: string) => void): Promise<boolean> {
   audio ??= new AudioContext();
   void audio.resume();
-  if (onProgress) progress.add(onProgress);
+  if (onStatus) status.add(onStatus);
   ready ??= new Promise<boolean>((resolve) => {
+    let loaded = false;
+    let watchdog = 0;
+    const settle = (ok: boolean, why?: string) => {
+      window.clearTimeout(watchdog);
+      if (loaded) return;
+      loaded = true;
+      if (!ok) {
+        console.warn(`[listen] Kokoro voice unavailable, using the browser voice: ${why}`);
+        worker?.terminate();
+        worker = null;
+      }
+      resolve(ok);
+    };
+    const alive = () => {
+      window.clearTimeout(watchdog);
+      watchdog = window.setTimeout(() => settle(false, "loading stalled"), STALL_MS);
+    };
+    const tell = (label: string) => status.forEach((f) => f(label));
     try {
       worker = new Worker(new URL("./tts.worker.ts", import.meta.url), { type: "module" });
-    } catch {
-      return resolve(false);
+    } catch (err) {
+      return settle(false, (err as Error).message);
     }
+    alive();
+    tell("Loading voice");
     worker.onmessage = (e: MessageEvent<TtsOut>) => {
       const m = e.data;
-      if (m.type === "progress") progress.forEach((f) => f(m.pct));
-      else if (m.type === "ready") resolve(true);
-      else if (m.type === "failed") resolve(false);
+      if (!loaded) alive();
+      if (m.type === "stage") tell(m.stage === "starting" ? "Starting voice" : "Loading voice");
+      else if (m.type === "progress") tell(m.pct < 100 ? `Downloading voice ${m.pct}%` : "Starting voice");
+      else if (m.type === "ready") settle(true);
+      else if (m.type === "failed") settle(false, m.message);
       else {
         const w = waiting.get(m.id);
         waiting.delete(m.id);
@@ -47,10 +72,10 @@ export function prepareVoice(onProgress?: (pct: number) => void): Promise<boolea
         else w?.reject(new Error(m.message));
       }
     };
-    worker.onerror = () => resolve(false);
+    worker.onerror = (e) => settle(false, e.message || "worker error");
     send({ type: "load" });
   });
-  return ready.finally(() => onProgress && progress.delete(onProgress));
+  return ready.finally(() => onStatus && status.delete(onStatus));
 }
 
 function synth(text: string): { id: number; clip: Promise<Clip> } {

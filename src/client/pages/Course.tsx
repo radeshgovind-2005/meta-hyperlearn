@@ -75,7 +75,7 @@ export function CoursePage() {
   const listenRef = useRef(listen);
   listenRef.current = listen;
   const listenPos = useRef(0);
-  const [voiceLoad, setVoiceLoad] = useState<number | null>(null);
+  const [voiceStatus, setVoiceStatus] = useState<string | null>(null);
   const [neural, setNeural] = useState(false);
   const script = useRef<{ blockId: string; text: string }[]>([]);
   const [micTrigger, setMicTrigger] = useState(0);
@@ -237,12 +237,13 @@ export function CoursePage() {
     }
     setListen("preparing");
     listenRef.current = "preparing";
-    setVoiceLoad(null);
+    setVoiceStatus(null);
     // the voice downloads once (then it is cached) while Muse Spark writes the script
-    const voice = prepareVoice((pct) => setVoiceLoad(pct));
+    const voice = prepareVoice(setVoiceStatus).finally(() => setVoiceStatus(null));
     let segs: { blockId: string; text: string }[];
     try {
-      segs = (await api<{ segments: { blockId: string; text: string }[] }>(`/api/courses/${courseId}/sections/${sectionId}/listen`, { body: {} })).segments;
+      const timeout = new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("script timed out")), 45_000));
+      segs = (await Promise.race([api<{ segments: { blockId: string; text: string }[] }>(`/api/courses/${courseId}/sections/${sectionId}/listen`, { body: {} }), timeout])).segments;
       if (!segs.length) throw new Error("empty script");
     } catch {
       // the raw text still works if the script cannot be written
@@ -361,7 +362,7 @@ export function CoursePage() {
             <div className="row" style={{ gap: 16 }}>
               <button type="button" className="link-btn" onClick={() => void toggleListen()} aria-pressed={listen !== "off"} disabled={listen === "preparing"}>
                 <span className="row" style={{ gap: 6 }}>
-                  {listen === "preparing" ? <span className="spinner" /> : <Speaker color="#0A5CFF" />} {listen === "preparing" ? (voiceLoad !== null && voiceLoad < 100 ? `Downloading voice ${voiceLoad}%` : "Preparing narration") : listen === "off" ? "Listen" : "Stop"}
+                  {listen === "preparing" ? <span className="spinner" /> : <Speaker color="#0A5CFF" />} {listen === "preparing" ? (voiceStatus ?? "Preparing narration") : listen === "off" ? "Listen" : "Stop"}
                 </span>
               </button>
               <Link to={`/courses/${courseId}/history`} style={{ fontSize: 14, fontWeight: 500, textDecoration: "none" }}>History</Link>

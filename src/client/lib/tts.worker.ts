@@ -13,6 +13,7 @@ const VOICE = "af_heart";
 
 export type TtsIn = { type: "load" } | { type: "speak"; id: number; text: string } | { type: "cancel"; ids: number[] };
 export type TtsOut =
+  | { type: "stage"; stage: "gpu" | "files" | "starting" }
   | { type: "progress"; pct: number }
   | { type: "ready" }
   | { type: "failed"; message: string }
@@ -25,15 +26,21 @@ const post = (m: TtsOut, transfer: Transferable[] = []) => scope.postMessage(m, 
 let model: Promise<KokoroTTS> | null = null;
 const load = () =>
   (model ??= (async () => {
+    post({ type: "stage", stage: "gpu" });
     const gpu = (navigator as Navigator & { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
-    if (!(await gpu?.requestAdapter())) throw new Error("WebGPU is not available");
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
+    if (!(await Promise.race([gpu?.requestAdapter() ?? null, timeout]))) throw new Error("WebGPU is not available in this browser's workers");
+    post({ type: "stage", stage: "files" });
     const tts = await KokoroTTS.from_pretrained(MODEL, {
       dtype: "fp32",
       device: "webgpu",
       progress_callback: (p) => {
+        // every message also tells the page the download is still alive
         if (p.status === "progress" && p.file.endsWith(".onnx")) post({ type: "progress", pct: Math.round(p.progress) });
+        else if (p.status === "progress" || p.status === "done") post({ type: "stage", stage: "files" });
       },
     });
+    post({ type: "stage", stage: "starting" });
     await tts.generate("Ready.", { voice: VOICE }); // compiles the GPU kernels so the first sentence is quick
     return tts;
   })());
