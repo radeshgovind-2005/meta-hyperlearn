@@ -45,7 +45,7 @@ export function Vector2d({ params, onState }: { params: Vector2dParams; onState?
     if (near !== undefined) {
       const r = (next * Math.PI) / 180;
       const k = eig.findIndex((e) => Math.abs(Math.cos(r) * e.v[1] - Math.sin(r) * e.v[0]) < 0.01);
-      if (k >= 0 && !found.includes(k)) setFound((f) => [...f, k]);
+      if (k >= 0) setFound((f) => (f.includes(k) ? f : [...f, k]));
     }
   };
   const fromPointer = (clientX: number, clientY: number) => {
