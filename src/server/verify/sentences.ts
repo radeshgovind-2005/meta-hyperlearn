@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Env } from "../env";
 import type { AiCtx } from "../ai/meta";
 import { chatJson, safeParseJson, asData, DATA_RULE, toJsonSchema } from "../ai/meta";
-import { openChat, openModelConfigured, openModelLabel } from "../ai/openModel";
+import { isOpenWeight, openChat, openModelLabel } from "../ai/openModel";
 import { MODELS } from "../ai/models";
 
 export type Verdict = { i: number; supported: boolean; reason: string };
@@ -81,7 +81,7 @@ export async function verifySentences(
   if (!evidence.length) return { checks: sentences.map((s) => ({ sentence: s, supported: false, reason: "no cited source" })), verifier: "none" };
   const prompt = buildPrompt(sentences, evidence);
 
-  if (openModelConfigured(env)) {
+  if (isOpenWeight(env)) {
     try {
       const text = await openChat(env, [{ role: "user", content: prompt }], { trace: ctx.trace, maxTokens: 3000, jsonSchema: toJsonSchema(VerdictsSchema) });
       ctx.onCall?.(env.OPEN_MODEL_ID!, 0);
@@ -101,5 +101,5 @@ export async function verifySentences(
     reasoningEffort: "low",
   });
   const verdicts = parseVerdicts(JSON.stringify(out), sentences.length);
-  return { checks: sentences.map((s, k) => ({ sentence: s, supported: verdicts[k].supported, reason: verdicts[k].reason })), verifier: "Muse Spark (fallback verifier)" };
+  return { checks: sentences.map((s, k) => ({ sentence: s, supported: verdicts[k].supported, reason: verdicts[k].reason })), verifier: "Muse Spark (verifier)" };
 }

@@ -11,7 +11,7 @@ import { tutor } from "./routes/tutor";
 import { voice } from "./routes/voice";
 import { admin } from "./routes/admin";
 import { runs } from "./routes/runs";
-import { pingOpenModel, openModelConfigured, openModelLabel } from "./ai/openModel";
+import { isOpenWeight, pingOpenModel, openModelConfigured, openModelLabel } from "./ai/openModel";
 
 export { CourseDO } from "./do/CourseDO";
 export { UserDO } from "./do/UserDO";
@@ -51,6 +51,7 @@ app.get("/api/health", async (c) => {
     }),
     check(async () => {
       if (!openModelConfigured(env)) throw new Error("OPEN_MODEL_* not set; Muse Spark verifies instead");
+      if (!isOpenWeight(env)) throw new Error(`OPEN_MODEL_* points at the Meta Model API (${env.OPEN_MODEL_ID}), not open weights; Muse Spark verifies`);
       if (!(await pingOpenModel(env))) throw new Error("endpoint not reachable");
       return { model: openModelLabel(env) };
     }),

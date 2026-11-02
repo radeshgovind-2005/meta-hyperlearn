@@ -9,7 +9,7 @@ export type AsrTurn = { startMs: number; endMs: number; transcript: string };
 export async function transcribeWav(ctx: AiCtx, wav: ArrayBuffer, offsetMs = 0): Promise<{ transcript: string; turns: AsrTurn[]; durationMs: number }> {
   return traceChild(ctx.trace, "voice-transcribe", "llm", { bytes: wav.byteLength, offsetMs }, async () => {
     const form = new FormData();
-    form.append("request", new Blob([JSON.stringify({ model: MODELS.transcribe, mode: "ENDPOINTING" })], { type: "application/json" }));
+    form.append("request", new Blob([JSON.stringify({ model: MODELS.transcribe, mode: "ENDPOINTING", audioEncoding: "WAV" })], { type: "application/json" }));
     form.append("audio", new Blob([wav], { type: "audio/wav" }), "audio.wav");
     const res = await metaFetch(ctx, "/asr/transcribe", { method: "POST", body: form });
     const json = (await res.json()) as { transcript?: string; audioDurationMs?: number; turns?: { startMs: number; endMs: number; transcript: string }[] };

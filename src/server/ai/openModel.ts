@@ -10,8 +10,19 @@ export function openModelConfigured(env: Env): boolean {
   return Boolean(env.OPEN_MODEL_BASE_URL && env.OPEN_MODEL_ID);
 }
 
+/** True only when the verifier is served from somewhere other than the Meta Model API (i.e. open weights). */
+export function isOpenWeight(env: Env): boolean {
+  if (!openModelConfigured(env)) return false;
+  try {
+    return new URL(env.OPEN_MODEL_BASE_URL!).host !== new URL(env.META_BASE_URL).host;
+  } catch {
+    return false;
+  }
+}
+
 export function openModelLabel(env: Env): string {
   const id = env.OPEN_MODEL_ID ?? "";
+  if (!isOpenWeight(env)) return `${id || "Muse Spark"} verifier (Meta Model API)`;
   if (/glimmer/i.test(id)) return "Muse Glimmer (open weights)";
   if (/spark/i.test(id)) return "Muse Spark Open (open weights)";
   return id ? `${id} (open weights)` : "open-weight model";
@@ -32,7 +43,7 @@ export async function openChat(
   const body: Record<string, unknown> = {
     model: env.OPEN_MODEL_ID,
     messages,
-    max_tokens: opts.maxTokens ?? 2000,
+    max_tokens: (opts.maxTokens ?? 2000) + 4000,
     temperature: 0,
   };
   if (opts.jsonSchema) body.response_format = { type: "json_schema", json_schema: { name: "verdicts", schema: opts.jsonSchema } };

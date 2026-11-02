@@ -76,7 +76,7 @@ export const tutor = new Hono<AppEnv>()
         reasoningEffort: "low",
         maxTokens: 500,
         tools: TOOLS,
-        toolChoice: "required",
+        toolChoice: "auto",
         messages: [
           { role: "system", content: `You route a student's command bar input to exactly one tool. The student is on ${where}. ${sectionList}. Questions go to ask unless they want outside or web sources.` },
           { role: "user", content: body.text },
@@ -124,6 +124,17 @@ export const tutor = new Hono<AppEnv>()
     return c.json({ ...row, report: row.report ? JSON.parse(row.report) : null });
   });
 
+function webLabel(u: string): string {
+  try {
+    const url = new URL(u);
+    const slug = url.pathname.split("/").filter(Boolean).pop() ?? "";
+    const words = slug.replace(/[-_]+/g, " ").replace(/\.\w+$/, "").replace(/\b[0-9a-f]{8,}\b/g, "").trim();
+    return words ? `${url.hostname.replace(/^www\./, "")}: ${words}` : url.hostname;
+  } catch {
+    return u;
+  }
+}
+
 type ResearchSource = { n: number; label: string; origin: "library" | "web"; url?: string; text: string };
 
 /**
@@ -144,16 +155,24 @@ async function runResearch(env: Env, userId: string, question: string, courseId?
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model: MODELS.spark, tools: [{ type: "web_search" }], input: `Find 3-4 reliable sources that answer: ${question}. For each give title, url and a 2-sentence summary of what it says.` }),
     }, 1);
-    const json = (await res.json()) as { output?: { type: string; content?: { type: string; text?: string; annotations?: { type: string; url?: string; title?: string }[] }[] }[]; usage?: { input_tokens: number; output_tokens: number } };
+    const json = (await res.json()) as {
+      output?: { type: string; phase?: string; action?: { type: string; url?: string }; content?: { type: string; text?: string; annotations?: { url?: string; title?: string }[] }[] }[];
+      usage?: { input_tokens: number; output_tokens: number };
+    };
     await recordSpend(ctx, MODELS.spark, tokenCost(MODELS.spark, json.usage?.input_tokens ?? 0, json.usage?.output_tokens ?? 0) + 0.0025);
-    const parts = (json.output ?? []).flatMap((o) => o.content ?? []);
-    const text = parts.map((p) => p.text ?? "").join("\n");
-    const anns = parts.flatMap((p) => p.annotations ?? []).filter((a) => a.url);
-    const seen = new Set<string>();
-    web = anns
-      .filter((a) => (seen.has(a.url!) ? false : (seen.add(a.url!), true)))
-      .slice(0, 4)
-      .map((a, k) => ({ n: sources.length + k + 1, label: a.title ?? new URL(a.url!).hostname, origin: "web" as const, url: a.url, text }));
+    const out = json.output ?? [];
+    // the final answer is the last non-commentary message; URLs come from its text, annotations and opened pages
+    const final = out.filter((o) => o.type === "message" && o.phase !== "commentary").flatMap((o) => o.content ?? []);
+    const text = final.map((p) => p.text ?? "").join("\n");
+    const urls = [
+      ...final.flatMap((p) => (p.annotations ?? []).map((a) => a.url ?? "")),
+      ...(text.match(/https?:\/\/[^\s)\]>"']+/g) ?? []),
+      ...out.filter((o) => o.type === "web_search_call" && o.action?.type === "open_page").map((o) => o.action!.url ?? ""),
+    ]
+      .map((u) => u.replace(/[.,;]+$/, "").split("?")[0])
+      .filter(Boolean);
+    const unique = [...new Set(urls)].slice(0, 4);
+    web = unique.map((u, k) => ({ n: sources.length + k + 1, label: webLabel(u), origin: "web" as const, url: u, text }));
     await recordRunTrace(env, runId, { label: `Searched the web: ${web.length} sources`, model: MODELS.spark });
   } catch (err) {
     await recordRunTrace(env, runId, { label: `Web search unavailable (${String((err as Error).message).slice(0, 80)}); used your library only`, ok: false });

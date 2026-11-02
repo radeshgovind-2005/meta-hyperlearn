@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "hyperlearn",
+  "name": "meta-hyperlearn",
   "main": "src/server/index.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -20,7 +20,7 @@
     "APP_ORIGIN": "https://hyperlearn.radesh-govind.com"
   },
   "d1_databases": [
-    { "binding": "DB", "database_name": "hyperlearn", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }
+    { "binding": "DB", "database_name": "hyperlearn", "database_id": "a3ca3bb4-65a8-448b-bb5b-e1ce3b3d31af", "migrations_dir": "migrations" }
   ],
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "hyperlearn-files" }],
   "vectorize": [{ "binding": "VECTORS", "index_name": "hyperlearn-chunks", "remote": true }],

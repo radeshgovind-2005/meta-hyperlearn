@@ -84,6 +84,8 @@ type ChatOpts = {
   name?: string;
 };
 
+const REASONING_HEADROOM = { low: 4000, medium: 8000, high: 16000 } as const;
+
 type ChatResult = { content: string; toolCalls: ToolCall[]; usage: { prompt: number; completion: number }; usd: number };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -110,7 +112,8 @@ export async function chat(ctx: AiCtx, opts: ChatOpts): Promise<ChatResult> {
   const body: Record<string, unknown> = {
     model,
     messages: opts.messages,
-    max_completion_tokens: opts.maxTokens ?? 4000,
+    // reasoning tokens count against this limit, so leave headroom above the answer budget
+    max_completion_tokens: (opts.maxTokens ?? 4000) + REASONING_HEADROOM[opts.reasoningEffort ?? "medium"],
   };
   if (opts.temperature !== undefined) body.temperature = opts.temperature;
   if (opts.reasoningEffort) body.reasoning_effort = opts.reasoningEffort;
@@ -127,13 +130,14 @@ export async function chat(ctx: AiCtx, opts: ChatOpts): Promise<ChatResult> {
     async () => {
       const res = await metaFetch(ctx, "/chat/completions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const json = (await res.json()) as {
-        choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[];
+        choices: { finish_reason?: string; message: { content: string | null; tool_calls?: ToolCall[] } }[];
         usage?: { prompt_tokens: number; completion_tokens: number };
       };
       const msg = json.choices?.[0]?.message;
       const usage = { prompt: json.usage?.prompt_tokens ?? 0, completion: json.usage?.completion_tokens ?? 0 };
       const usd = tokenCost(model, usage.prompt, usage.completion);
       await recordSpend(ctx, model, usd);
+      if (!msg?.content && !msg?.tool_calls?.length && json.choices?.[0]?.finish_reason === "length") throw new ModelError("The model ran out of tokens while reasoning");
       return { content: msg?.content ?? "", toolCalls: msg?.tool_calls ?? [], usage, usd };
     },
     (r) => ({ content: r.content, tool_calls: r.toolCalls, usage: r.usage }),
