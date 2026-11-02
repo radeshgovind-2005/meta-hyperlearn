@@ -8,6 +8,7 @@ import { CiteMarks, ExerciseCard, FigureView, WidgetCard, type SourceInfo } from
 import { SourcePane } from "../components/SourcePane";
 import { CommandBar } from "../components/CommandBar";
 import { Md } from "../components/Md";
+import { Skeleton, Working } from "../components/Working";
 import { ShareDialog } from "../components/ShareDialog";
 import { Speaker } from "../components/Icons";
 import { useConfig } from "../main";
@@ -28,7 +29,7 @@ type Change = { blockId: string; request: string; runId: string; summary: string
 type MutState =
   | { stage: "idle" }
   | { stage: "ask"; blockId: string; request: string }
-  | { stage: "working"; blockId: string; request: string; runId: string; steps: Step[] }
+  | { stage: "working"; blockId: string; request: string; runId: string; steps: Step[]; since: number }
   | ({ stage: "saving" } & Change)
   | ({ stage: "kept"; message: string; showBefore: boolean } & Change)
   | ({ stage: "undoing" } & Change);
@@ -126,7 +127,7 @@ export function CoursePage() {
     async (blockId: string, request: string) => {
       if (!section) return;
       setSelected(blockId);
-      setMut({ stage: "working", blockId, request, runId: "", steps: [] });
+      setMut({ stage: "working", blockId, request, runId: "", steps: [], since: Date.now() });
       const result: { done?: RunDone } = {};
       try {
         await streamEvents<RunEvent>(`/api/courses/${courseId}/sections/${sectionId}/mutate`, { blockId, request }, (ev) => {
@@ -297,7 +298,7 @@ export function CoursePage() {
           aria-busy={practiceBusy}
         >
           {practiceBusy ? (
-            <span className="row" style={{ gap: 8 }}><span className="spinner" />Writing exam-style questions…</span>
+            <span className="row" style={{ gap: 8 }}><span className="spinner" />Opening practice…</span>
           ) : (
             "Practice this chapter"
           )}
@@ -332,7 +333,7 @@ export function CoursePage() {
             </div>
           )}
 
-          {sec.loading && !section && <p className="muted">Loading…</p>}
+          {sec.loading && !section && <Skeleton title lines={6} />}
           {blocks.map((b, i) => {
             const isSel = selected === b.id;
             const working = mut.stage === "working" && mut.blockId === b.id;
@@ -374,7 +375,14 @@ export function CoursePage() {
                   <FigureView block={b} url={sec.data?.figures[b.r2Key]} />
                 )}
                 {showForm && <MutateForm initial={mut.request} onCancel={() => setMut({ stage: "idle" })} onRun={(r) => void startMutation(b.id, r)} />}
-                {working && <div className="placeholder-box">{mut.stage === "working" && mut.steps.findIndex((s) => s.status === "active") >= 3 ? "Building the interactive example…" : "Rewriting…"}</div>}
+                {working && mut.stage === "working" && (
+                  <Working
+                    className="mutate-working"
+                    label={mut.steps.find((s) => s.status === "active")?.label ?? "Understanding your request"}
+                    since={mut.since}
+                    usually={/example|widget|interactive/i.test(mut.request) ? "45 s" : "20 s"}
+                  />
+                )}
                 {b.id === decisionAnchor && <Decision />}
               </div>
             );

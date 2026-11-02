@@ -296,3 +296,4 @@ ins { color: var(--success); background: #e7f6ed; text-decoration: none; }
 .q-step-btn.on { border-color: var(--primary); background: #f0f5ff; }
 .q-step-btn.wrong-step { border-color: var(--warning); background: #fff8f0; }
 .confidence { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--body); }
+.mutate-working { padding: 4px 2px; }

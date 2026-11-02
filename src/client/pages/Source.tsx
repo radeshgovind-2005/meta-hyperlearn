@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Shell } from "../components/Shell";
+import { PageSkeleton } from "../components/Working";
 import { api } from "../lib/api";
 import { fmtTime, formatDate, useApi, usePoll } from "../lib/hooks";
 import { useApp } from "../lib/app";
@@ -35,7 +36,7 @@ export function SourcePage() {
 
   if (r.error) return <Shell><p className="err-text">{r.error.message}</p></Shell>;
   const d = r.data;
-  if (!d) return <Shell><p className="muted">Loading…</p></Shell>;
+  if (!d) return <Shell><PageSkeleton /></Shell>;
   const s = d.source;
   const pageChunks = d.chunks.filter((c) => c.page === page);
   const isAudio = s.kind === "audio";

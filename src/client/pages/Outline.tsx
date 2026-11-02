@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Shell } from "../components/Shell";
+import { PageSkeleton, Working } from "../components/Working";
 import { ShareDialog } from "../components/ShareDialog";
 import { api } from "../lib/api";
 import { formatDate, useApi, usePoll } from "../lib/hooks";
@@ -27,7 +28,7 @@ export function OutlinePage() {
 
   if (r.error) return <Shell><p className="err-text">{r.error.message}</p></Shell>;
   const d = r.data;
-  if (!d) return <Shell><p className="muted">Loading…</p></Shell>;
+  if (!d) return <Shell><PageSkeleton /></Shell>;
 
   if (d.course.status !== "ready") {
     return (
@@ -35,8 +36,9 @@ export function OutlinePage() {
         <h1 className="page-title">{d.course.title}</h1>
         {d.course.status === "building" ? (
           <div className="card" style={{ maxWidth: 560 }}>
-            <div className="row"><span className="spinner" /><strong>Building your course</strong></div>
-            <p className="muted">{d.course.progress ?? "Starting"}. Every sentence is checked against its source before it is shown.</p>
+            <strong>Building your course</strong>
+            <Working label={d.course.progress ?? "Starting"} since={(d.course as { updated_at?: number; created_at?: number }).updated_at ?? Date.now()} usually="3 to 6 min" />
+            <p className="muted small">Every sentence is checked against its source before it is shown. You can leave this page; the build keeps going and the course appears in your library when it is ready.</p>
           </div>
         ) : (
           <div className="callout callout-warn" style={{ maxWidth: 560 }}>
@@ -89,7 +91,7 @@ export function OutlinePage() {
           <div className="row">
             {next && <Link to={`/courses/${courseId}/s/${next.id}`} className="btn btn-primary">{next.read ? "Start" : "Continue"} {numbers.get(next.id) ?? ""} {next.title}</Link>}
             <button type="button" className="btn" onClick={() => void practice()} disabled={practiceBusy} aria-busy={practiceBusy}>
-              {practiceBusy ? <><span className="spinner" /> Writing questions…</> : "Practice"}
+              {practiceBusy ? <><span className="spinner" /> Opening…</> : "Practice"}
             </button>
             {d.role === "owner" && next && <Link to={`/courses/${courseId}/s/${next.id}/edit`} className="btn">Edit</Link>}
             <button type="button" className="btn" onClick={() => setShare(true)}>Share</button>

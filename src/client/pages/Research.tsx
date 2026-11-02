@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { Shell } from "../components/Shell";
+import { PageSkeleton } from "../components/Working";
 import { useApi, usePoll } from "../lib/hooks";
 import { usePageContext } from "../lib/app";
 
@@ -13,7 +14,7 @@ export function ResearchPage() {
   usePoll(() => void r.reload(), r.data?.status === "running", 2500);
   usePageContext({ courseId: r.data?.course_id ?? undefined }, [r.data]);
   const d = r.data;
-  if (!d) return <Shell><p className="muted">Loading…</p></Shell>;
+  if (!d) return <Shell><PageSkeleton /></Shell>;
   const rep = d.report;
   const paras = (rep?.md ?? "").split(/\n{2,}/).filter(Boolean);
   return (

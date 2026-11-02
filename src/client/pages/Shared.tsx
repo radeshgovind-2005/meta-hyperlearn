@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Shell } from "../components/Shell";
+import { PageSkeleton } from "../components/Working";
 import { api } from "../lib/api";
 import { formatDate, useApi } from "../lib/hooks";
 import { useApp, usePageContext } from "../lib/app";
@@ -58,7 +59,7 @@ export function UpdatesPage() {
   const [busy, setBusy] = useState(false);
   usePageContext({ courseId, courseTitle: r.data?.title }, [courseId, r.data]);
   const d = r.data;
-  if (!d) return <Shell><p className="muted">Loading…</p></Shell>;
+  if (!d) return <Shell><PageSkeleton /></Shell>;
   const first = "from" in d ? d.from.split(" ")[0] : "";
 
   const pull = async (body: { upstreamSectionIds?: string[]; keepMine?: string[] }) => {
