@@ -17,3 +17,4 @@ All work below was built during the Meta Global AI Developer Hackathon (deadline
 - 2026-11-02 — Live UI pass on production; fixes for reader decision placement, practice progress, owner names on invites, follower changes in Recent changes; LangSmith eval 82/88 sentences supported (93.2%); v1.0.0.
 
 - 2026-11-02: Split course builds into section Workflows, batch source-isolated sentence checks, add attempt-scoped D1 results and owner Retry build; 37 Workers tests pass including a 145-request regression.
+- 2026-11-02: Deployed the section-workflow fix on Workers Free and rebuilt Parallel Computing via owner Retry build: 18 sections, 7 existing sources, 109/112 sentences supported with the rest removed, exactly one published version.

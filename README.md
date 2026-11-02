@@ -62,7 +62,8 @@ flowchart LR
     API --> VEC[(Vectorize: cited chunks)]
     API --> CDO[Course Durable Object: LangGraph mutate/adapt, live sync, checkpoints]
     API --> UDO[User Durable Object: spend caps]
-    API --> WF[Workflows: ingest, build course]
+    API --> WF[Workflows: ingest, course coordinator]
+    WF --> SW[Section Workflows: write, verify, repair]
     CDO --> BR[Browser Rendering: widget tests]
     SBX --- WID[Widget Worker: separate origin + strict CSP]
   end
@@ -73,7 +74,7 @@ flowchart LR
 ```
 
 - **Ingest (Workflow):** PDF text with positions (unpdf) → regions with bounding boxes → Muse Spark structure and exam style → embeddings → Vectorize. Page images are rendered in the browser at upload (Workers have no canvas). Audio is cut into 16 kHz WAV parts in the browser and transcribed with timestamps.
-- **Build (Workflow):** outline → sections written source-first with chunk citations → exam-style exercises → sentence verification → version 1.
+- **Build (Workflows):** a coordinator plans the outline and starts one child Workflow per section. Each child writes at most six text blocks and one exam-style exercise, then verifies all its sentences in one structured request using only each block’s cited evidence. One rewrite/recheck is allowed; API and JSON retries stay bounded, with no additional Workflow retries around model calls. Results live in D1 under the build attempt; the coordinator publishes version 1 atomically only when every section succeeds. Completed steps are reused on replay. Owners can retry failed builds from the existing uploads; older attempts cannot publish.
 - **Bring your own key:** keys are encrypted with AES-GCM (bound to the Clerk user id) and only decrypted per request. Without a key you are in demo mode on our key, under a hard global cap.
 - **Free-tier guard:** one Durable Object counts R2 storage and operations, Vectorize vectors and queries, Workers AI calls and Browser Rendering tests, capped at ~80% of each Cloudflare free allowance. When a cap is reached, uploads pause with a message to contact contact@radesh-govind.com; existing courses keep working.
 - **Security:** source text and web pages are wrapped as data in prompts; all model output is validated with zod; custom widgets run in `<iframe sandbox="allow-scripts">` on `hyperlearn-widgets.radesh-govind.com` with `default-src 'none'`.
@@ -105,7 +106,7 @@ npm run seed:prod                # ingest seed/ and build the demo course
 node scripts/eval.mjs --remote   # LangSmith eval
 ```
 
-Checks: `npm run typecheck`, `npm run lint`, `npm test` (Vitest in the Workers runtime: patch application, citation verification parsing, widget claim checks, key encryption, SAM parsing, LangGraph interrupt/resume).
+Checks: `npm run typecheck`, `npm run lint`, `npm test` (Vitest in the Workers runtime: patch application, citation verification parsing, widget claim checks, key encryption, SAM parsing, LangGraph interrupt/resume, section build request budgets, evidence isolation, duplicate delivery and stale-attempt publication).
 
 ## License
 
