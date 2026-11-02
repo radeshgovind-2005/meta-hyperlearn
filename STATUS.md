@@ -11,8 +11,14 @@ Verified locally against the real Meta API (2026-11-02): ingest of 4 sources (PD
 ## Next
 Record the 3-minute video, post on X, and submit before Wed Nov 4, 9:00 PM ET. Existing external limitations remain listed in BLOCKERS.md.
 
+## Reader fixes (2026-11-02)
+- Removed the "Show as" toggle and its `/view` route.
+- Command bar is pinned to the bottom of the viewport on every screen (sticky dock).
+- Mutations save as soon as they pass verification (no Keep step); later requests build on the saved version; Undo and Try another way commit the previous blocks back.
+- Verified on production (Worker version `02dfa257-edc5-4fb5-9162-58819c4d40b5`) with Playwright on the demo course: two stacked changes persisted across reload, Undo restored the original, and the test overlay was removed afterwards.
+
 ## Last deploy
-2026-11-02 18:43 UTC · Worker `meta-hyperlearn` on https://hyperlearn.radesh-govind.com (Workers Free plan) and `hyperlearn-widgets` on https://hyperlearn-widgets.radesh-govind.com · `/api/health` ok (D1, R2, Vectorize, Meta API, quota) · demo course `crs_qdhs2ck5wt` seeded (4 sources, 8 sections).
+2026-11-02 19:05 UTC (version 02dfa257) · Worker `meta-hyperlearn` on https://hyperlearn.radesh-govind.com (Workers Free plan) and `hyperlearn-widgets` on https://hyperlearn-widgets.radesh-govind.com · `/api/health` ok (D1, R2, Vectorize, Meta API, quota) · demo course `crs_qdhs2ck5wt` seeded (4 sources, 8 sections).
 
 ## Live UI pass (2026-11-02, signed in on production)
 Checked against design/screens: Sign in, Onboarding key, Empty library, Outline, Course reader (citations + source highlight), Mutate (ask → live steps → done with vector2d widget → Keep as overlay), Practice (grading → adapt re-plan → Keep), adapted Outline, History, Share (non-owner copy + owner invite), Invite (public), Settings AI and usage, Source, Palette.

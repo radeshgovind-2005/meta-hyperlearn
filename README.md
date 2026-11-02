@@ -9,7 +9,7 @@ Live: **https://hyperlearn.radesh-govind.com** (sign in, then open the sample co
 HyperLearn turns a student's own material into a course:
 
 - **Every sentence is cited.** Click a citation and the source pane shows the exact page with the region highlighted, or plays the lecture recording from that second.
-- **Change anything.** Select a paragraph and say "this is too complex, simplify it and give me an interactive example". The section changes in place: the AI emits patch operations, every new sentence is checked against its cited source, the interactive example is recomputed in code and tested in a real browser, and you choose **Keep** or **Undo**.
+- **Change anything.** Select a paragraph and say "this is too complex, simplify it and give me an interactive example". The section changes in place: the AI emits patch operations, every new sentence is checked against its cited source, the interactive example is recomputed in code and tested in a real browser. The change is saved as soon as it passes, so the next request builds on it; **Undo** puts the section back.
 - **Practice in the style of your past exam.** A wrong answer re-plans your path (Muse Wonder inserts a short review from your own sources, as a diff you can keep or undo).
 - **Share.** Others can **follow** your course (live updates, their own changes stay private) or **copy** it (their own version that can still pull your updates).
 - **A command bar on every screen** (`/` or Cmd+K, or speak to it) calls the same tools as the UI.
@@ -42,7 +42,7 @@ Before you see a change, `mutateGraph` (LangGraph.js inside a Durable Object) ru
 2. **Claim check (code, not a model):** a widget's `claims` (e.g. `A * [1, 1] == 3 * [1, 1]`) are recomputed with mathjs.
 3. **Browser check:** the widget is loaded in Cloudflare Browser Rendering; any console error fails it, and Muse Spark judges the screenshot against the request.
 4. **Retry, then drop:** failures go back to the writers with the error (max 2 retries); anything still unsupported is removed and the "What changed" panel says so.
-5. **Keep / Undo:** the graph pauses with `interrupt()`; its checkpoint lives in the Durable Object's SQLite, so it survives eviction.
+5. **Save / Undo:** a verified change is committed right away (a new version for owners, a personal overlay for everyone else); Undo commits the previous blocks back. LangGraph checkpoints live in the Durable Object's SQLite, so runs survive eviction.
 
 Every run shows "How this was decided" (each step and the models used) and is traced to LangSmith.
 

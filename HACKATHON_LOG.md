@@ -18,3 +18,4 @@ All work below was built during the Meta Global AI Developer Hackathon (deadline
 
 - 2026-11-02: Split course builds into section Workflows, batch source-isolated sentence checks, add attempt-scoped D1 results and owner Retry build; 37 Workers tests pass including a 145-request regression.
 - 2026-11-02: Deployed the section-workflow fix on Workers Free and rebuilt Parallel Computing via owner Retry build: 18 sections, 7 existing sources, 109/112 sentences supported with the rest removed, exactly one published version.
+- 2026-11-02: Reader changes now save automatically and stack (Undo / Try another way afterwards), command bar pinned to the bottom of every screen, removed the Show as toggle; verified on production with Playwright.
