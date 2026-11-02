@@ -2,5 +2,7 @@
   "name": "hyperlearn-test",
   "main": "./worker.ts",
   "compatibility_date": "2026-10-01",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [{ "binding": "DB", "database_name": "test", "database_id": "test" }],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "test-files" }]
 }

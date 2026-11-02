@@ -12,6 +12,7 @@ export interface Env {
   USER_DO: DurableObjectNamespace<UserDO>;
   INGEST: Workflow;
   BUILD: Workflow;
+  BUILD_SECTION: Workflow;
 
   CLERK_SECRET_KEY: string;
   CLERK_PUBLISHABLE_KEY: string;

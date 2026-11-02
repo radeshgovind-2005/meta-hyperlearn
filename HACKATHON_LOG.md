@@ -15,3 +15,5 @@ All work below was built during the Meta Global AI Developer Hackathon (deadline
 - 2026-11-02 — Original CC BY seed material: two lecture decks, a midterm, a synthetic lecture recording.
 - 2026-11-02 — Free-tier quota guard (R2 storage/ops, Vectorize, Workers AI, Browser Rendering) with contact message; privacy and terms pages; deployed to the custom domains on the Workers Free plan and seeded the demo course.
 - 2026-11-02 — Live UI pass on production; fixes for reader decision placement, practice progress, owner names on invites, follower changes in Recent changes; LangSmith eval 82/88 sentences supported (93.2%); v1.0.0.
+
+- 2026-11-02: Split course builds into section Workflows, batch source-isolated sentence checks, add attempt-scoped D1 results and owner Retry build; 37 Workers tests pass including a 145-request regression.

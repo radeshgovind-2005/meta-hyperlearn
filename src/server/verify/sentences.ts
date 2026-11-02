@@ -79,11 +79,31 @@ export async function verifySentences(
   const sentences = splitSentences(md);
   if (!sentences.length) return { checks: [], verifier: "none" };
   if (!evidence.length) return { checks: sentences.map((s) => ({ sentence: s, supported: false, reason: "no cited source" })), verifier: "none" };
-  const prompt = buildPrompt(sentences, evidence);
+  return verifySentencePrompt(env, ctx, sentences, buildPrompt(sentences, evidence));
+}
+
+/** One request for a section; each numbered sentence has its own evidence scope. */
+export async function verifySentenceBatch(env: Env, ctx: AiCtx, groups: { md: string; evidence: string[] }[]) {
+  const entries = groups.flatMap((g, group) => splitSentences(g.md).map((sentence) => ({ sentence, group, evidence: g.evidence })));
+  const eligible = entries.filter((e) => e.evidence.length);
+  const prompt = [
+    "Check each numbered sentence using ONLY the evidence in its own item. Evidence from another item cannot support it.",
+    "Support paraphrases, simplifications and direct consequences, including correct worked examples. Reject added facts and contradictions.",
+    DATA_RULE,
+    ...eligible.map((e, k) => `${k + 1}.\n${asData("sentence", e.sentence)}\n${e.evidence.map((text) => asData("evidence for this sentence only", text)).join("\n")}`),
+    'Return JSON only: {"verdicts":[{"i":1,"supported":true,"reason":"short reason"}]} with one entry per numbered sentence.',
+  ].join("\n");
+  const result = eligible.length ? await verifySentencePrompt(env, ctx, eligible.map((e) => e.sentence), prompt) : { checks: [], verifier: "none" };
+  let i = 0;
+  const checks = entries.map((e) => ({ ...(!e.evidence.length ? { sentence: e.sentence, supported: false, reason: "no cited source" } : result.checks[i++]), group: e.group }));
+  return { checks, verifier: result.verifier };
+}
+
+async function verifySentencePrompt(env: Env, ctx: AiCtx, sentences: string[], prompt: string): Promise<{ checks: SentenceCheck[]; verifier: string }> {
 
   if (isOpenWeight(env)) {
     try {
-      const text = await openChat(env, [{ role: "user", content: prompt }], { trace: ctx.trace, maxTokens: 3000, jsonSchema: toJsonSchema(VerdictsSchema) });
+      const text = await openChat(env, [{ role: "user", content: prompt }], { trace: ctx.trace, maxTokens: 6000, jsonSchema: toJsonSchema(VerdictsSchema) });
       ctx.onCall?.(env.OPEN_MODEL_ID!, 0);
       const verdicts = parseVerdicts(text, sentences.length);
       return { checks: sentences.map((s, k) => ({ sentence: s, supported: verdicts[k].supported, reason: verdicts[k].reason })), verifier: openModelLabel(env) };
@@ -97,7 +117,7 @@ export async function verifySentences(
     messages: [{ role: "user", content: prompt }],
     schema: VerdictsSchema,
     schemaName: "verdicts",
-    maxTokens: 3000,
+    maxTokens: 6000,
     reasoningEffort: "low",
   });
   const verdicts = parseVerdicts(JSON.stringify(out), sentences.length);

@@ -10,6 +10,7 @@ import { commitSection, commitSnapshot, courseSnapshot, courseView, loadSection 
 import { pathWithTitles } from "../course/practice";
 import { getAiCtx } from "../ai/meta";
 import { rephraseSection } from "../course/views";
+import { retryBuild } from "../course/buildJobs";
 import { assertQuota } from "../lib/quota";
 import { chunkToCite, searchChunks, type ChunkRow } from "../lib/chunks";
 
@@ -84,8 +85,25 @@ export const courses = new Hono<AppEnv>()
       ...results.map((r) => c.env.DB.prepare("INSERT INTO course_sources (course_id, source_id) VALUES (?, ?)").bind(id, r.id)),
     ]);
     const runId = await createRun(c.env, { userId, courseId: id, graph: "buildCourse", input: { goal: body.goal } });
-    await c.env.BUILD.create({ id: runId, params: { courseId: id, userId, runId, goal: body.goal } });
+    await c.env.DB.prepare("UPDATE courses SET build_attempt = ? WHERE id = ?").bind(runId, id).run();
+    try {
+      await c.env.BUILD.create({ id: runId, params: { courseId: id, userId, runId, goal: body.goal } });
+    } catch (err) {
+      await c.env.DB.prepare("UPDATE courses SET status = 'failed', progress = 'Could not start the build. Please retry.' WHERE id = ? AND build_attempt = ?").bind(id, runId).run();
+      throw err;
+    }
     return c.json({ id, runId });
+  })
+  .post("/:id/retry", async (c) => {
+    const userId = c.get("userId");
+    const access = await courseAccess(c.env, c.req.param("id"), userId);
+    if (!access || access.role !== "owner") return c.json({ error: "Only the owner can retry this build" }, 403);
+    if (access.course.status !== "failed" || access.course.current_version !== 0) return c.json({ error: "Only a failed, unpublished course can be rebuilt" }, 409);
+    try {
+      await assertQuota(c.env, ["classA", "ai", "vectorQueries"]);
+      const result = await retryBuild(c.env, access.course.id, userId);
+      return result ? c.json(result) : c.json({ error: "A build is already running" }, 409);
+    } catch (err) { return errorResponse(c, err); }
   })
   .get("/:id", async (c) => {
     const userId = c.get("userId");

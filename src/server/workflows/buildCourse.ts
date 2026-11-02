@@ -2,99 +2,82 @@ import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloud
 import type { Env } from "../env";
 import { flushQuota, meteredEnv } from "../lib/quota";
 import { getAiCtx } from "../ai/meta";
-import { gatherSectionChunks, loadSourcesFor, planOutline, verifyBlocks, writeSection } from "../course/build";
-import { putBlocks } from "../lib/blocks";
+import { loadSourcesFor, planOutline } from "../course/build";
 import { randomId } from "../lib/crypto";
 import { finishRun, recordRunTrace } from "../lib/runs";
-import type { ExamStyle } from "../ingest/pipeline";
+import { activeBuild, buildJobs, commitBuild, completedJobs } from "../course/buildJobs";
+import { MODEL_STEP, type SectionBuildParams } from "./buildSection";
 
 export type BuildParams = { courseId: string; userId: string; runId: string; goal: string };
 
-const retry = { retries: { limit: 2, delay: "5 seconds" as const, backoff: "exponential" as const }, timeout: "10 minutes" as const };
-
-/** buildCourseGraph on Workflows; sections are written in parallel steps. */
+/** The coordinator makes only outline calls; every section gets its own request budget. */
 export class BuildCourseWorkflow extends WorkflowEntrypoint<Env, BuildParams> {
   async run(event: WorkflowEvent<BuildParams>, step: WorkflowStep) {
-    const { courseId, userId, runId, goal } = event.payload;
+    const p = event.payload;
+    const { courseId, userId, runId, goal } = p;
     const env = meteredEnv(this.env);
-    const progress = (p: string) => env.DB.prepare("UPDATE courses SET progress = ? WHERE id = ?").bind(p, courseId).run();
+    const progress = (text: string) => env.DB.prepare("UPDATE courses SET progress = ? WHERE id = ? AND build_attempt = ? AND status = 'building'").bind(text, courseId, runId).run();
     try {
+      const active = await step.do("active", async () => Boolean(await activeBuild(env, courseId, runId)));
+      if (!active) return { skipped: true };
       await step.do("progress-outline", async () => { await progress("Planning the outline"); });
-      const outline = await step.do("outline", retry, async () => {
+      const outline = await step.do("outline", MODEL_STEP, async () => {
         const ctx = await getAiCtx(env, userId);
         return planOutline(ctx, await loadSourcesFor(env, courseId), goal);
       });
-      await step.do("trace-outline", async () => {
-        await recordRunTrace(env, runId, { label: `Planned ${outline.chapters.length} chapters, ${outline.chapters.reduce((n, c) => n + c.sections.length, 0)} sections`, model: "muse-spark-1.3" });
-        await env.DB.prepare("UPDATE courses SET title = CASE WHEN title = 'New course' THEN ? ELSE title END, description = ? WHERE id = ?").bind(outline.title, outline.description, courseId).run();
-      });
-
       const flat = outline.chapters.flatMap((ch) => ch.sections.map((s) => ({ ...s, chapter: ch.title })));
       const ids = await step.do("section-ids", async () => flat.map(() => randomId("sec")));
-      await step.do("progress-write", async () => { await progress(`Writing ${flat.length} sections`); });
-
-      const written = await Promise.all(
-        flat.map((s, k) =>
-          step.do(`section-${k}`, retry, async () => {
-            const ctx = await getAiCtx(env, userId);
-            const sources = await loadSourcesFor(env, courseId);
-            const exam = sources.find((x) => x.kind === "exam");
-            const chunks = await gatherSectionChunks(env, sources, s.pages, `${s.title}: ${s.concept}`);
-            const args = {
-              title: s.title,
-              concept: s.concept,
-              chunks,
-              sources,
-              examStyle: exam?.meta.examStyle as ExamStyle | undefined,
-              examName: exam?.filename,
-              examSourceId: exam?.id,
-              previousTitles: flat.slice(0, k).map((p) => p.title),
-            };
-            let blocks = await writeSection(env, ctx, args);
-            let v = await verifyBlocks(env, ctx, blocks);
-            if (v.problems.length) {
-              blocks = await writeSection(env, ctx, { ...args, feedback: v.problems.join("\n") });
-              v = await verifyBlocks(env, ctx, blocks);
-            }
-            const hashes = await putBlocks(env, v.blocks);
-            return { hashes, checked: v.checked, supported: v.supported, verifier: v.verifier };
-          }),
-        ),
-      );
-
-      const version = await step.do("commit", async () => {
-        const now = Date.now();
-        const stmts = flat.flatMap((s, k) => [
-          env.DB.prepare("INSERT OR IGNORE INTO sections (id, course_id, chapter, concept, origin, created_at) VALUES (?, ?, ?, ?, 'build', ?)").bind(ids[k], courseId, s.chapter, s.concept, now),
-          env.DB.prepare("INSERT OR IGNORE INTO section_versions (section_id, version, title, block_hashes, created_at) VALUES (?, 1, ?, ?, ?)").bind(ids[k], s.title, JSON.stringify(written[k].hashes), now),
-        ]);
-        await env.DB.batch(stmts);
-        const checked = written.reduce((n, w) => n + w.checked, 0);
-        const supported = written.reduce((n, w) => n + w.supported, 0);
+      await step.do("prepare-sections", async () => {
+        if (!(await activeBuild(env, courseId, runId))) return;
         await env.DB.batch([
-          env.DB.prepare("INSERT OR IGNORE INTO course_versions (course_id, version, kind, summary, path, sections, author_id, run_id, created_at) VALUES (?, 1, 'build', ?, ?, ?, ?, ?, ?)").bind(
-            courseId,
-            `Built from ${flat.length} sections. ${supported} of ${checked} sentences matched their sources.`,
-            JSON.stringify(ids),
-            JSON.stringify(Object.fromEntries(ids.map((id) => [id, 1]))),
-            userId,
-            runId,
-            now,
-          ),
-          env.DB.prepare("UPDATE courses SET status = 'ready', progress = NULL, current_version = 1, updated_at = ? WHERE id = ?").bind(now, courseId),
+          env.DB.prepare("UPDATE courses SET title = CASE WHEN title = 'New course' THEN ? ELSE title END, description = ? WHERE id = ? AND build_attempt = ?").bind(outline.title, outline.description, courseId, runId),
+          ...flat.map((s, k) => env.DB.prepare("INSERT OR IGNORE INTO section_build_jobs (attempt_id, section_id, course_id, ord, title, chapter, concept, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").bind(runId, ids[k], courseId, k, s.title, s.chapter, s.concept, Date.now())),
         ]);
-        await recordRunTrace(env, runId, { label: `Checked ${checked} sentences against their sources: ${supported} supported, the rest removed`, model: written[0]?.verifier });
-        await finishRun(env, runId, "done");
-        await flushQuota(env);
-        return 1;
+        await recordRunTrace(env, runId, { label: `Planned ${flat.length} sections; each will be written and checked independently`, model: "muse-spark-1.3" });
       });
-      return { version };
+      // Stable IDs make a replay of dispatch safe. Completed children are never rerun.
+      for (let k = 0; k < flat.length; k++) {
+        await step.do(`dispatch-${k}`, async () => {
+          if (!(await activeBuild(env, courseId, runId))) return;
+          const id = `${runId}-${ids[k]}`;
+          const params: SectionBuildParams = { ...p, sectionId: ids[k], section: flat[k], previousTitles: flat.slice(0, k).map((s) => s.title) };
+          try {
+            await env.BUILD_SECTION.create({ id, params });
+          } catch (err) {
+            // Only accept a duplicate if the exact instance actually exists.
+            try { await (await env.BUILD_SECTION.get(id)).status(); } catch { throw err; }
+          }
+        });
+      }
+      for (let poll = 0; poll < 160; poll++) {
+        const state = await step.do(`poll-${poll}`, async () => {
+          // One query for all children per interval; no per-child status API polling.
+          const jobs = await buildJobs(env, courseId, runId);
+          const done = completedJobs(jobs, flat.length);
+          await progress(`${jobs.filter((j) => j.status === "done").length} of ${flat.length} sections written and checked`);
+          return { done };
+        });
+        if (state.done) {
+          await step.do("commit", async () => {
+            const jobs = await buildJobs(env, courseId, runId);
+            if (!completedJobs(jobs, flat.length)) throw new Error("Sections are not all ready");
+            await commitBuild(env, p, jobs);
+            await recordRunTrace(env, runId, { label: `Checked ${jobs.reduce((n, j) => n + j.checked, 0)} sentences against their own cited sources; unsupported sentences removed`, model: jobs[0]?.verifier ?? undefined });
+            await finishRun(env, runId, "done");
+          });
+          return { version: 1 };
+        }
+        await step.sleep(`wait-${poll}`, "15 seconds");
+      }
+      throw new Error("The sections took too long to finish. Please retry the build.");
     } catch (err) {
       await step.do("failed", async () => {
-        await env.DB.prepare("UPDATE courses SET status = 'failed', progress = ? WHERE id = ?").bind(String((err as Error).message).slice(0, 300), courseId).run();
+        await env.DB.prepare("UPDATE courses SET status = 'failed', progress = ? WHERE id = ? AND build_attempt = ? AND status = 'building'").bind(String((err as Error).message).slice(0, 500), courseId, runId).run();
         await finishRun(env, runId, "failed");
       });
       throw err;
+    } finally {
+      await flushQuota(env);
     }
   }
 }

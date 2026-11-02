@@ -6,7 +6,7 @@ import { MODELS } from "../ai/models";
 import type { Block, Cite } from "../../shared/types";
 import { chunkToCite, chunksForPages, formatChunksForPrompt, getChunks, searchChunks, type ChunkRow } from "../lib/chunks";
 import { randomId } from "../lib/crypto";
-import { verifySentences, splitSentences } from "../verify/sentences";
+import { verifySentenceBatch, splitSentences } from "../verify/sentences";
 import type { ExamStyle } from "../ingest/pipeline";
 
 // buildCourseGraph nodes: outline → sections as blocks → exam-style exercises → verify → commit v1.
@@ -41,9 +41,9 @@ const OutlineSchema = z.object({
           concept: z.string().describe("the main concept, short lower-case noun phrase"),
           pages: z.array(z.object({ sourceId: z.string(), page: z.number().int() })),
         }),
-      ),
+      ).min(1).max(6),
     }),
-  ),
+  ).min(1).max(3),
 });
 export type Outline = z.infer<typeof OutlineSchema>;
 
@@ -82,7 +82,7 @@ const SectionDraftSchema = z.object({
       chunkIds: z.array(z.string()).describe("ids of the chunks this block is based on"),
       verbatim: z.boolean().describe("true if the text is copied from the chunk with only minimal edits"),
     }),
-  ),
+  ).max(7).refine((blocks) => blocks.filter((b) => b.kind === "text").length <= 6 && blocks.filter((b) => b.kind === "exercise").length === 1, "Use at most six text blocks and exactly one exercise"),
 });
 type SectionDraft = z.infer<typeof SectionDraftSchema>;
 
@@ -100,7 +100,7 @@ export function examStyleText(style: ExamStyle | undefined, examName: string | u
 
 export async function gatherSectionChunks(env: Env, sources: SourceInfo[], pages: { sourceId: string; page: number }[], query: string): Promise<ChunkRow[]> {
   const bySource = new Map<string, number[]>();
-  for (const p of pages) bySource.set(p.sourceId, [...(bySource.get(p.sourceId) ?? []), p.page]);
+  for (const p of pages.filter((p) => sources.some((s) => s.id === p.sourceId && s.kind !== "exam"))) bySource.set(p.sourceId, [...(bySource.get(p.sourceId) ?? []), p.page]);
   const direct: ChunkRow[] = [];
   for (const [sid, ps] of bySource) direct.push(...(await chunksForPages(env, sid, ps)));
   // lecture audio and other sources join through semantic search
@@ -177,15 +177,16 @@ export async function verifyBlocks(env: Env, ctx: AiCtx, blocks: Block[]): Promi
   let supported = 0;
   let verifier = "none";
   const out: Block[] = [];
-  const results = await Promise.all(
-    blocks.map(async (b) => {
-      if (b.kind !== "text") return null;
-      const ev = (await getChunks(env, b.cites.map((c) => c.chunkId!).filter(Boolean))).map((c) => c.text);
-      return verifySentences(env, ctx, b.md, ev);
-    }),
-  );
-  blocks.forEach((b, k) => {
-    const r = results[k];
+  const texts = blocks.filter((b) => b.kind === "text");
+  const chunks = await getChunks(env, texts.flatMap((b) => b.cites.map((c) => c.chunkId!).filter(Boolean)));
+  const groups = texts.map((b) => ({
+    md: b.md,
+    evidence: chunks.filter((ch) => b.cites.some((c) => c.chunkId === ch.id && c.sourceId === ch.source_id)).map((ch) => ch.text),
+  }));
+  const result = await verifySentenceBatch(env, ctx, groups);
+  blocks.forEach((b) => {
+    const group = texts.indexOf(b as typeof texts[number]);
+    const r = b.kind === "text" ? { checks: result.checks.filter((c) => c.group === group), verifier: result.verifier } : null;
     if (!r) return out.push(b);
     verifier = r.verifier;
     checked += r.checks.length;

@@ -35,6 +35,7 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CourseDO", "UserDO"] }],
   "workflows": [
     { "name": "hyperlearn-ingest", "binding": "INGEST", "class_name": "IngestWorkflow" },
-    { "name": "hyperlearn-build", "binding": "BUILD", "class_name": "BuildCourseWorkflow" }
+    { "name": "hyperlearn-build", "binding": "BUILD", "class_name": "BuildCourseWorkflow" },
+    { "name": "hyperlearn-build-section", "binding": "BUILD_SECTION", "class_name": "BuildSectionWorkflow" }
   ]
 }

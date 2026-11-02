@@ -17,6 +17,7 @@ import { isOpenWeight, pingOpenModel, openModelConfigured, openModelLabel } from
 export { CourseDO } from "./do/CourseDO";
 export { UserDO } from "./do/UserDO";
 export { IngestWorkflow } from "./workflows/ingest";
+export { BuildSectionWorkflow } from "./workflows/buildSection";
 export { BuildCourseWorkflow } from "./workflows/buildCourse";
 
 const app = new Hono<AppEnv>();

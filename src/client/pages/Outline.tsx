@@ -16,6 +16,7 @@ export function OutlinePage() {
   const { toast, reloadCourses } = useApp();
   const r = useApi<Resp>(`/api/courses/${courseId}`);
   const [share, setShare] = useState(params.get("share") === "1");
+  const [retryBusy, setRetryBusy] = useState(false);
   const [practiceBusy, setPracticeBusy] = useState(false);
   const building = r.data?.course.status === "building";
   usePoll(() => {
@@ -40,7 +41,16 @@ export function OutlinePage() {
         ) : (
           <div className="callout callout-warn" style={{ maxWidth: 560 }}>
             <strong>The build failed</strong>
-            <p className="small">{d.course.progress}</p>
+            <p className="small">{d.course.progress || "The course could not be completed. Your uploaded sources are still available."}</p>
+            {d.role === "owner" && <button type="button" className="btn btn-primary" disabled={retryBusy} aria-busy={retryBusy} onClick={async () => {
+              setRetryBusy(true);
+              try {
+                await api(`/api/courses/${courseId}/retry`, { body: {} });
+                await r.reload();
+                await reloadCourses();
+              } catch (err) { toast((err as Error).message); }
+              finally { setRetryBusy(false); }
+            }}>{retryBusy ? "Starting…" : "Retry build"}</button>}
           </div>
         )}
       </Shell>
