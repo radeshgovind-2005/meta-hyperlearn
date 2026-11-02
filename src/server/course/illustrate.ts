@@ -58,7 +58,7 @@ async function plan(ctx: AiCtx, args: { title: string; text: string; request?: s
         role: "system",
         content: [
           "You brief an illustrator for one picture at the top of a course page. Show the idea of the page as a concrete visual: a diagram, a scene or an analogy a student would recognise.",
-          "Describe shapes, objects, arrows and layout in plain words. Do not ask for any text, labels, numbers or formulas inside the picture; the caption carries the words.",
+          "Image models cannot draw exact geometry, so prefer a simple concrete scene or everyday analogy over a precise technical diagram (for maths: a stretching sheet, a spinning wheel, a scale, rooms and doors), with at most four or five clear objects. Describe shapes, objects, arrows and layout in plain words. Do not ask for any text, labels, numbers or formulas inside the picture; the caption carries the words.",
           "Draw only what the page's text says. Do not invent facts.",
           DATA_RULE,
         ].join(" "),
@@ -92,7 +92,7 @@ async function judge(ctx: AiCtx, image: GeneratedImage, args: { title: string; s
         content: [
           {
             type: "text",
-            text: `This picture goes at the top of the course page "${args.title}". It was meant to show: ${args.subject}\nAnswer ok=true if it clearly relates to that, looks clean and is suitable for a textbook. Answer ok=false if it is unrelated, confusing, shows garbled or misspelled text, a watermark, a face, or looks broken. Give a one-sentence reason.`,
+            text: `This picture goes at the top of the course page "${args.title}". It was meant to show: ${args.subject}\nAnswer ok=true if it clearly relates to that idea, looks clean and is suitable for a textbook. It is an illustration, not a technical drawing, so do not reject it for imprecise geometry or proportions. Answer ok=false only if it is unrelated, confusing, shows garbled or misspelled text, a watermark, a realistic face, or looks broken. Give a one-sentence reason.`,
           },
           { type: "image_url", image_url: { url: `data:${image.mime};base64,${btoa(bin)}` } },
         ],

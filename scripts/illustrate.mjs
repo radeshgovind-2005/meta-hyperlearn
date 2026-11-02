@@ -25,7 +25,7 @@ const flag = process.argv.indexOf("--course");
 let courseId = flag > 0 ? process.argv[flag + 1] : undefined;
 if (!courseId) {
   const list = await call("/courses");
-  courseId = (list.courses ?? list).find((c) => c.is_demo)?.id;
+  courseId = list.items.find((c) => c.is_demo)?.id;
   if (!courseId) throw new Error("no demo course found; pass --course <id>");
 }
 const { sections } = await call(`/courses/${courseId}`);
