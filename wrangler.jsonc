@@ -36,6 +36,5 @@
   "workflows": [
     { "name": "hyperlearn-ingest", "binding": "INGEST", "class_name": "IngestWorkflow" },
     { "name": "hyperlearn-build", "binding": "BUILD", "class_name": "BuildCourseWorkflow" }
-  ],
-  "limits": { "cpu_ms": 300000 }
+  ]
 }
