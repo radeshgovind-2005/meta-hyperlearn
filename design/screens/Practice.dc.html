@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HyperLearn — Practice</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A5CFF}a:hover{color:#0047CC}
+</style>
+</helmet>
+<div style="min-height: 900px; font-family: Figtree, 'Helvetica Neue', Arial, sans-serif; color: #1C2B33; background: #FFFFFF; display: flex; flex-direction: column">
+  <header style="height: 64px; display: flex; align-items: center; gap: 16px; padding: 0 32px; border-bottom: 1px solid #E3E6EA; flex-wrap: wrap">
+    <a href="Course.dc.html" style="font-size: 14px; font-weight: 500; text-decoration: none">Back to 3.2</a>
+    <span style="font-size: 14px; color: #5B6B7A">Practice · Linear Algebra</span>
+    <span style="margin-left: auto; font-size: 14px; color: #5B6B7A">2 / 5</span>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-wrap: wrap">
+    <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 48px; display: flex; justify-content: center">
+      <div style="width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 28px">
+        <section style="display: flex; flex-direction: column; gap: 12px">
+          <p style="margin: 0; font-size: 13px; color: #5B6B7A">Question 2 · in the style of Midterm 2025</p>
+          <p style="margin: 0; font-family: 'Source Serif 4', Georgia, serif; font-size: 21px; line-height: 1.55">Let A = [[4, 1], [2, 3]]. Find the eigenvalues of A and one eigenvector for each.</p>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 8px">
+          <p style="margin: 0; font-size: 14px; font-weight: 500">Your answer</p>
+          <p style="margin: 0; padding: 14px 16px; border: 1px solid #D4D9DE; border-radius: 8px; font: 400 15px/1.6 ui-monospace, Menlo, monospace">det(A − λI) = (4 − λ)(3 − λ) + 2<br>λ² − 7λ + 14 = 0</p>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 8px; padding-top: 20px; border-top: 1px solid #E3E6EA">
+          <p style="margin: 0; font-size: 15px; font-weight: 600; color: #A14D00">Not quite</p>
+          <p style="margin: 0; font-size: 15px; line-height: 1.6">The off-diagonal product is subtracted, not added: (4 − λ)(3 − λ) − 2. That gives λ² − 7λ + 10 = 0, so λ = 2 and λ = 5. <a href="Course.dc.html" style="text-decoration: none; font-weight: 500">See L05_slides, page 4</a></p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px">
+            <button type="button" style="height: 40px; padding: 0 18px; border-radius: 999px; border: none; background: #0A5CFF; color: #FFFFFF; font: 600 14px Figtree, sans-serif; cursor: pointer">Try a similar question</button>
+            <button type="button" style="height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid #D4D9DE; background: #FFFFFF; color: #1C2B33; font: 500 14px Figtree, sans-serif; cursor: pointer">Show full solution</button>
+          </div>
+        </section>
+
+        <section aria-label="Course updated" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid #E3E6EA; border-radius: 10px; background: #F6F7F9">
+          <p style="margin: 0; font-size: 15px; font-weight: 600">We adjusted your course</p>
+          <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #3E4C59">Your eigenvector steps were right; the determinant was the problem. We added a 4‑minute determinants review before 3.2, with a practice slider, and moved 3.3 after one more round of practice.</p>
+          <div style="display: flex; gap: 16px; align-items: center">
+            <button type="button" style="height: 36px; padding: 0 16px; border-radius: 999px; border: 1px solid #1C2B33; background: #1C2B33; color: #FFFFFF; font: 500 14px Figtree, sans-serif; cursor: pointer">Keep</button>
+            <button type="button" style="border: none; background: none; padding: 0; font: 500 14px Figtree, sans-serif; color: #0A5CFF; cursor: pointer">Undo</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <aside aria-label="How this was decided" style="flex: 1 1 300px; max-width: 360px; box-sizing: border-box; border-left: 1px solid #E3E6EA; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px">
+      <p style="margin: 0; font-size: 14px; font-weight: 600">How this was decided</p>
+      <ol style="margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 14px; font-size: 14px; line-height: 1.45; color: #3E4C59">
+        <li><span style="color: #1C2B33; font-weight: 500">Graded</span> against the exam’s marking pattern</li>
+        <li><span style="color: #1C2B33; font-weight: 500">Diagnosed</span> the error as a determinant mistake</li>
+        <li><span style="color: #1C2B33; font-weight: 500">Re-planned</span> the next sections</li>
+        <li><span style="color: #1C2B33; font-weight: 500">Wrote</span> the review from L05 only</li>
+        <li><span style="color: #1C2B33; font-weight: 500">Checked</span> every sentence against its source, rewrote one</li>
+      </ol>
+      <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #5B6B7A; font-family: ui-monospace, Menlo, monospace">muse-spark · muse-wonder-1.0 · muse-spark-open (verifier)</p>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

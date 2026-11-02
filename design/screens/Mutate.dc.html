@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HyperLearn — Change a section</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A5CFF}a:hover{color:#0047CC}
+</style>
+</helmet>
+<div style="min-height: 900px; font-family: Figtree, 'Helvetica Neue', Arial, sans-serif; color: #1C2B33; background: #FFFFFF; display: flex; flex-direction: column">
+  <header style="height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 32px; border-bottom: 1px solid #E3E6EA; flex-wrap: wrap">
+    <a href="Outline.dc.html" style="font-size: 14px; font-weight: 500; text-decoration: none">Linear Algebra</a>
+    <span style="font-size: 14px; color: #5B6B7A">3.2 Eigenvectors</span>
+    <span style="margin-left: auto; font-size: 13px; color: #5B6B7A">{{versionLabel}}</span>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-wrap: wrap">
+    <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 40px 48px; display: flex; justify-content: center">
+      <article style="width: 100%; max-width: 700px; display: flex; flex-direction: column; gap: 18px">
+        <h1 style="margin: 0; font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.015em">Eigenvectors and eigenvalues</h1>
+        <p style="margin: 0; font-family: 'Source Serif 4', Georgia, serif; font-size: 19px; line-height: 1.65; color: #3E4C59">In 3.1 you saw that a matrix moves vectors around: it can stretch them, flip them and turn them.</p>
+
+        <sc-if value="{{isAsk}}" hint-placeholder-val="{{ true }}">
+          <p style="margin: 0; padding: 8px 10px; border-radius: 6px; background: #E8F0FF; font-family: 'Source Serif 4', Georgia, serif; font-size: 19px; line-height: 1.65">A nonzero vector v is an eigenvector of A if Av = λv for some scalar λ. The eigenvalues are the roots of the characteristic polynomial det(A − λI), and together they form the spectrum of A.<sup style="font-family: Figtree, sans-serif; font-size: 12px; margin-left: 2px; color: #0A5CFF; font-weight: 600">1,2</sup></p>
+          <form aria-label="Change this paragraph" style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid #D4D9DE; border-radius: 10px; background: #FFFFFF; box-shadow: 0 8px 24px rgba(28,43,51,0.10)">
+            <label for="ask" style="font-size: 13px; font-weight: 500; color: #3E4C59">Change this paragraph</label>
+            <textarea id="ask" rows="2" style="resize: none; border: 1px solid #D4D9DE; border-radius: 8px; padding: 10px 12px; font: 400 15px/1.5 Figtree, sans-serif; color: #1C2B33">This is too complex. Simplify it and give me an interactive example I can play with.</textarea>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center">
+              <button type="button" style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #D4D9DE; background: #FFFFFF; font: 500 13px Figtree, sans-serif; color: #3E4C59; cursor: pointer">Simpler</button>
+              <button type="button" style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #D4D9DE; background: #FFFFFF; font: 500 13px Figtree, sans-serif; color: #3E4C59; cursor: pointer">Interactive example</button>
+              <button type="button" style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #D4D9DE; background: #FFFFFF; font: 500 13px Figtree, sans-serif; color: #3E4C59; cursor: pointer">More examples</button>
+              <button type="button" style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #D4D9DE; background: #FFFFFF; font: 500 13px Figtree, sans-serif; color: #3E4C59; cursor: pointer">Exam focus</button>
+              <button type="button" onClick="{{run}}" style="margin-left: auto; height: 36px; padding: 0 18px; border-radius: 999px; border: none; background: #0A5CFF; color: #FFFFFF; font: 600 14px Figtree, sans-serif; cursor: pointer">Change it</button>
+            </div>
+          </form>
+        </sc-if>
+
+        <sc-if value="{{isWorking}}" hint-placeholder-val="{{ false }}">
+          <p style="margin: 0; padding: 8px 10px; border-radius: 6px; background: #F6F7F9; font-family: 'Source Serif 4', Georgia, serif; font-size: 19px; line-height: 1.65; color: #A9B1BA">A nonzero vector v is an eigenvector of A if Av = λv for some scalar λ. The eigenvalues are the roots of the characteristic polynomial det(A − λI), and together they form the spectrum of A.</p>
+          <div style="height: 200px; border: 1.5px dashed #D4D9DE; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #5B6B7A">{{workingLabel}}</div>
+        </sc-if>
+
+        <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #5B6B7A">
+            <span>{{changedLabel}}</span>
+            <button type="button" onClick="{{toggleBefore}}" style="border: none; background: none; padding: 0; font: 500 13px Figtree, sans-serif; color: #0A5CFF; cursor: pointer">{{toggleLabel}}</button>
+          </div>
+          <p style="margin: 0; font-family: 'Source Serif 4', Georgia, serif; font-size: 19px; line-height: 1.65; {{paraStyle}}">{{paragraph}}<sup style="font-family: Figtree, sans-serif; font-size: 12px; margin-left: 2px; color: #0A5CFF; font-weight: 600">1,2</sup></p>
+
+          <section aria-label="Interactive example" style="border: 1px solid #E3E6EA; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+            <p style="margin: 0; font-size: 15px; font-weight: 600">Try it: turn v until A stops turning it</p>
+            <div style="display: flex; gap: 24px; flex-wrap: wrap; align-items: center">
+              <svg viewBox="0 0 280 280" role="img" aria-label="{{svgLabel}}" style="flex: 0 1 260px; max-width: 260px; height: auto">
+                <path d="M10 140H270M140 10V270" stroke="#E3E6EA" stroke-width="1" fill="none"></path>
+                <line x1="{{dx1}}" y1="{{dy1}}" x2="{{dx2}}" y2="{{dy2}}" stroke="#A9B1BA" stroke-width="1" stroke-dasharray="4 4"></line>
+                <line x1="140" y1="140" x2="{{ax}}" y2="{{ay}}" stroke="{{avColor}}" stroke-width="5" stroke-linecap="round" opacity="0.55"></line>
+                <circle cx="{{ax}}" cy="{{ay}}" r="5" fill="{{avColor}}"></circle>
+                <line x1="140" y1="140" x2="{{vx}}" y2="{{vy}}" stroke="#1C2B33" stroke-width="3" stroke-linecap="round"></line>
+                <circle cx="{{vx}}" cy="{{vy}}" r="4" fill="#1C2B33"></circle>
+              </svg>
+              <div style="flex: 1 1 220px; display: flex; flex-direction: column; gap: 12px">
+                <p style="margin: 0; font-size: 14px; color: #3E4C59">A = [[2, 1], [1, 2]]. Black is v. Blue is Av.</p>
+                <label for="theta" style="font-size: 14px; font-weight: 500">Direction of v: {{thetaLabel}}°</label>
+                <input id="theta" type="range" min="0" max="355" step="5" value="{{theta}}" onChange="{{setTheta}}" style="accent-color: #0A5CFF">
+                <p aria-live="polite" style="margin: 0; font-size: 15px; font-weight: 500; color: {{statusColor}}">{{status}}</p>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 12px; color: #5B6B7A">Built from L07 slide 12 · tested before it was shown</p>
+          </section>
+
+          <sc-if value="{{notKept}}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
+              <button type="button" onClick="{{keep}}" style="height: 40px; padding: 0 20px; border-radius: 999px; border: none; background: #1C2B33; color: #FFFFFF; font: 500 14px Figtree, sans-serif; cursor: pointer">Keep</button>
+              <button type="button" onClick="{{reset}}" style="height: 40px; padding: 0 20px; border-radius: 999px; border: 1px solid #D4D9DE; background: #FFFFFF; color: #1C2B33; font: 500 14px Figtree, sans-serif; cursor: pointer">Undo</button>
+              <button type="button" onClick="{{run}}" style="border: none; background: none; padding: 0; font: 500 14px Figtree, sans-serif; color: #0A5CFF; cursor: pointer">Try another way</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{kept}}" hint-placeholder-val="{{ false }}">
+            <p style="margin: 0; font-size: 14px; color: #0A7A3D">Saved as version 15. You can undo it from the course history.</p>
+          </sc-if>
+        </sc-if>
+      </article>
+    </main>
+
+    <aside aria-label="What is happening" style="flex: 1 1 280px; max-width: 340px; box-sizing: border-box; border-left: 1px solid #E3E6EA; padding: 40px 24px; display: flex; flex-direction: column; gap: 16px">
+      <sc-if value="{{isAsk}}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; font-size: 14px; font-weight: 600">Change anything</p>
+        <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #3E4C59">Select a paragraph, figure or example, then say what you need. Other things people ask for:</p>
+        <ul style="margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #3E4C59">
+          <li>Explain it with an analogy</li>
+          <li>Show 3 worked examples</li>
+          <li>Turn this into exam questions</li>
+          <li>Use the figure from my slides</li>
+        </ul>
+      </sc-if>
+      <sc-if value="{{isWorking}}" hint-placeholder-val="{{ false }}">
+        <p style="margin: 0; font-size: 14px; font-weight: 600">Working on it</p>
+        <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px">
+          <sc-for list="{{steps}}" as="s" hint-placeholder-count="6">
+            <li style="display: flex; gap: 10px; align-items: center; font-size: 14px; color: {{s.color}}"><span style="width: 8px; height: 8px; border-radius: 50%; flex: none; {{s.dot}}"></span>{{s.label}}</li>
+          </sc-for>
+        </ol>
+      </sc-if>
+      <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+        <p style="margin: 0; font-size: 14px; font-weight: 600">What changed</p>
+        <ul style="margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #3E4C59">
+          <li>Rewrote 1 paragraph, simpler</li>
+          <li>Added 1 interactive example</li>
+          <li>Kept both citations</li>
+          <li>Every sentence matched its source</li>
+          <li>Example ran without errors</li>
+        </ul>
+        <a href="History.dc.html" style="font-size: 14px; font-weight: 500; text-decoration: none">Course history</a>
+      </sc-if>
+      <button type="button" onClick="{{reset}}" style="margin-top: auto; align-self: flex-start; border: none; background: none; padding: 0; font: 500 13px Figtree, sans-serif; color: #5B6B7A; cursor: pointer">Replay this demo</button>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { stage: 'ask', step: 0, before: false, kept: false, theta: 20 };
+    this.timer = null;
+  }
+  componentDidUpdate() { this.tick(); }
+  componentWillUnmount() { if (this.timer) clearTimeout(this.timer); }
+  tick() {
+    if (this.state.stage !== 'working' || this.timer) return;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      const next = this.state.step + 1;
+      if (next >= 6) this.setState({ stage: 'done', step: 6 });
+      else this.setState({ step: next });
+    }, 700);
+  }
+  renderVals() {
+    const st = this.state;
+    const labels = ['Understanding your request', 'Reading L07 slide 12 and Strang p.289', 'Rewriting the paragraph', 'Building the interactive example', 'Checking each sentence against its source', 'Testing the example in a browser'];
+    const steps = labels.map((label, i) => ({
+      label,
+      color: i <= st.step ? '#1C2B33' : '#A9B1BA',
+      dot: i < st.step ? 'background: #0A7A3D;' : (i === st.step ? 'background: #0A5CFF;' : 'border: 1.5px solid #D4D9DE; box-sizing: border-box;')
+    }));
+    const before = 'A nonzero vector v is an eigenvector of A if Av = λv for some scalar λ. The eigenvalues are the roots of the characteristic polynomial det(A − λI), and together they form the spectrum of A.';
+    const after = 'Multiplying by A usually turns a vector. An eigenvector is a vector that A does not turn: it only gets stretched or flipped. How much it is stretched is the eigenvalue, λ.';
+    const t = st.theta * Math.PI / 180, c = Math.cos(t), s = Math.sin(t);
+    const S = 45, ox = 140, oy = 140;
+    const avx = 2 * c + s, avy = c + 2 * s;
+    const aligned = Math.abs(Math.cos(2 * t)) < 0.02;
+    const lam = Math.round(2 + Math.sin(2 * t));
+    const r = (n) => Math.round(n * 10) / 10;
+    return {
+      isAsk: st.stage === 'ask',
+      isWorking: st.stage === 'working',
+      isDone: st.stage === 'done',
+      steps,
+      workingLabel: st.step >= 3 ? 'Building the interactive example…' : 'Rewriting…',
+      versionLabel: st.kept ? 'Version 15' : 'Version 14',
+      changedLabel: st.before ? 'Before the change' : 'Changed just now',
+      toggleLabel: st.before ? 'Show new version' : 'Show before',
+      paragraph: st.before ? before : after,
+      paraStyle: st.before ? 'color: #5B6B7A;' : 'color: #1C2B33;',
+      notKept: !st.kept,
+      kept: st.kept,
+      theta: st.theta,
+      thetaLabel: String(st.theta),
+      vx: r(ox + S * c), vy: r(oy - S * s),
+      ax: r(ox + S * avx), ay: r(oy - S * avy),
+      dx1: r(ox - 130 * c), dy1: r(oy + 130 * s), dx2: r(ox + 130 * c), dy2: r(oy - 130 * s),
+      avColor: aligned ? '#0A7A3D' : '#0A5CFF',
+      status: aligned ? 'Same line. v is an eigenvector, and λ = ' + lam + '.' : 'Av points a different way, so v is not an eigenvector yet.',
+      statusColor: aligned ? '#0A7A3D' : '#3E4C59',
+      svgLabel: aligned ? 'v and Av lie on the same line' : 'v and Av point in different directions',
+      run: () => this.setState({ stage: 'working', step: 0, before: false, kept: false }),
+      reset: () => { if (this.timer) { clearTimeout(this.timer); this.timer = null; } this.setState({ stage: 'ask', step: 0, before: false, kept: false, theta: 20 }); },
+      keep: () => this.setState({ kept: true }),
+      toggleBefore: () => this.setState({ before: !st.before }),
+      setTheta: (e) => this.setState({ theta: Number(e.target.value) })
+    };
+  }
+}
+</script>
+</body>
+</html>

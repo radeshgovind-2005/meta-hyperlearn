@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hyperlearn",
+  "main": "src/server/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "routes": [{ "pattern": "hyperlearn.radesh-govind.com", "custom_domain": true }],
+  "vars": {
+    "META_BASE_URL": "https://api.meta.ai/v1",
+    "LANGSMITH_TRACING": "true",
+    "LANGSMITH_PROJECT": "hyperlearn",
+    "DEMO_SPEND_CAP_USD": "40",
+    "WIDGETS_ORIGIN": "https://hyperlearn-widgets.radesh-govind.com",
+    "APP_ORIGIN": "https://hyperlearn.radesh-govind.com"
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "hyperlearn", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }
+  ],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "hyperlearn-files" }],
+  "vectorize": [{ "binding": "VECTORS", "index_name": "hyperlearn-chunks", "remote": true }],
+  "ai": { "binding": "AI", "remote": true },
+  "browser": { "binding": "BROWSER", "remote": true },
+  "durable_objects": {
+    "bindings": [
+      { "name": "COURSE_DO", "class_name": "CourseDO" },
+      { "name": "USER_DO", "class_name": "UserDO" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CourseDO", "UserDO"] }],
+  "workflows": [
+    { "name": "hyperlearn-ingest", "binding": "INGEST", "class_name": "IngestWorkflow" },
+    { "name": "hyperlearn-build", "binding": "BUILD", "class_name": "BuildCourseWorkflow" }
+  ],
+  "limits": { "cpu_ms": 300000 }
+}

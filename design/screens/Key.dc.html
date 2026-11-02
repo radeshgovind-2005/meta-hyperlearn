@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HyperLearn — Add your API key</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A5CFF}a:hover{color:#0047CC}
+</style>
+</helmet>
+<div style="min-height: 900px; font-family: Figtree, 'Helvetica Neue', Arial, sans-serif; color: #1C2B33; background: #FFFFFF; display: flex; flex-direction: column">
+  <header style="height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; border-bottom: 1px solid #E3E6EA; gap: 16px">
+    <img src="../assets/logo.png" alt="HyperLearn" style="height: 22px; width: auto">
+    <div style="display: flex; align-items: center; gap: 16px">
+      <span style="font-size: 13px; color: #5B6B7A">Step 1 of 2</span>
+      <button type="button" aria-label="Account menu, Radesh Govind" style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #1C2B33; color: #FFFFFF; font: 600 13px Figtree, sans-serif; cursor: pointer">RG</button>
+    </div>
+  </header>
+
+  <main style="flex: 1; display: flex; justify-content: center; padding: 72px 24px">
+    <section style="width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 28px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h1 style="margin: 0; font-size: 28px; line-height: 1.2; font-weight: 600; letter-spacing: -0.01em">Add your Meta Model API key</h1>
+        <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #5B6B7A">HyperLearn uses your key for every AI request you make. Create one in the Model API dashboard under API keys.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="key" style="font-size: 14px; font-weight: 500">API key</label>
+        <div style="display: flex; gap: 8px">
+          <input id="key" type="password" value="sk-meta-0000000000000000004f2a" style="flex: 1; min-width: 0; height: 44px; border-radius: 8px; border: 1px solid #D4D9DE; padding: 0 14px; font: 400 14px ui-monospace, Menlo, monospace; color: #1C2B33">
+          <button type="button" style="height: 44px; padding: 0 18px; border-radius: 8px; border: 1px solid #D4D9DE; background: #FFFFFF; font: 500 14px Figtree, sans-serif; color: #1C2B33; cursor: pointer">Verify</button>
+        </div>
+        <p style="margin: 2px 0 0; font-size: 13px; color: #0A7A3D">Key works. All HyperLearn features are available.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="cap" style="font-size: 14px; font-weight: 500">Monthly limit</label>
+        <div style="display: flex; align-items: center; height: 44px; width: 160px; border-radius: 8px; border: 1px solid #D4D9DE; padding: 0 14px; box-sizing: border-box; gap: 4px">
+          <span style="font-size: 15px; color: #5B6B7A">$</span>
+          <input id="cap" type="number" value="20" style="flex: 1; min-width: 0; border: none; outline: none; font: 400 15px Figtree, sans-serif; color: #1C2B33">
+        </div>
+        <p style="margin: 2px 0 0; font-size: 13px; color: #5B6B7A">AI features pause when you reach it.</p>
+      </div>
+
+      <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid #E3E6EA">
+        <a href="FirstUpload.dc.html" style="margin-top: 20px; height: 44px; padding: 0 24px; border-radius: 999px; background: #0A5CFF; color: #FFFFFF; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; text-decoration: none">Continue</a>
+        <a href="Library.dc.html" style="margin-top: 20px; font-size: 14px; font-weight: 500; text-decoration: none">Use the free demo instead</a>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #5B6B7A">Your key is encrypted before it is stored. Remove it anytime in Settings.</p>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
