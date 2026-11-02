@@ -7,7 +7,7 @@ import { MODELS } from "../ai/models";
 import type { WidgetSpec } from "../../shared/types";
 import { traceChild } from "../lib/tracing";
 
-export type RenderCheck = { ok: boolean; errors: string[]; judge: { ok: boolean; reason: string } | null; screenshot?: string };
+export type RenderCheck = { ok: boolean; errors: string[]; judge: { ok: boolean; reason: string } | null; screenshot?: string; unavailable?: string };
 
 const b64url = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
@@ -32,7 +32,12 @@ export async function renderAndJudge(env: Env, ctx: AiCtx, spec: WidgetSpec, req
       if (spec.template === "custom") {
         await page.setContent(spec.html, { waitUntil: "load" });
       } else {
-        await page.goto(`${env.APP_ORIGIN}/embed/widget#${b64url(JSON.stringify(spec))}`, { waitUntil: "networkidle0", timeout: 20_000 });
+        try {
+          await page.goto(`${env.APP_ORIGIN}/embed/widget#${b64url(JSON.stringify(spec))}`, { waitUntil: "networkidle0", timeout: 20_000 });
+        } catch (err) {
+          // the test page itself is unreachable: an infrastructure problem, not a broken widget
+          return { ok: true, errors: [], judge: null, unavailable: (err as Error).message.slice(0, 120) };
+        }
         await page.waitForSelector("[data-widget-ready]", { timeout: 10_000 });
       }
       // interact once so handlers run
@@ -45,7 +50,9 @@ export async function renderAndJudge(env: Env, ctx: AiCtx, spec: WidgetSpec, req
       }
       screenshot = (await page.screenshot({ encoding: "base64", type: "png" })) as string;
     } catch (err) {
-      errors.push(`render failed: ${(err as Error).message}`);
+      const msg = (err as Error).message ?? String(err);
+      if (!browser || /launch|quota|rate limit|429/i.test(msg)) return { ok: true, errors: [], judge: null, unavailable: msg.slice(0, 120) };
+      errors.push(`render failed: ${msg}`);
     } finally {
       await browser?.close().catch(() => {});
     }

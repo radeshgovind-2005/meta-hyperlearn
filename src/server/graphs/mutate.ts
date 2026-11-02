@@ -31,7 +31,7 @@ export const MUTATE_STEPS = [
 const IntentSchema = z.object({
   simplify: z.boolean(),
   addWidget: z.boolean(),
-  moreExamples: z.boolean(),
+  moreExamples: z.boolean().describe("only if the student explicitly asks for more or worked examples"),
   examFocus: z.boolean(),
   analogy: z.boolean(),
   tooComplex: z.boolean().describe("the student says it is too hard / confusing"),
@@ -227,7 +227,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
         {
           role: "system",
           content: [
-            "You design one small interactive example for a course paragraph. Pick a template and fill its params. Use 'custom' only if no template fits.",
+            "You design one small interactive example for a course paragraph. Pick a template and fill its params. Strongly prefer a template: vector2d for anything about a 2x2 matrix acting on vectors (eigenvectors, transformations), plot for functions and polynomials (e.g. a characteristic polynomial with its roots), stepper for worked procedures. Use 'custom' only if none of these can show it.",
             `Templates:\n${TEMPLATE_DOCS}`,
             "Claims are mathjs boolean expressions over the params that state the facts the widget teaches; they are recomputed in code. For vector2d, A is available as a matrix (e.g. 'A * [1, 1] == 3 * [1, 1]', 'det(A) == 3'). For plot, f(x) is the plotted function with slider values (e.g. 'f(2) == 0'). Give 2–4 claims.",
             "Numbers must come from the chunks when they give an example; otherwise choose small integers.",
@@ -290,7 +290,8 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
       v.render = await renderAndJudge(env, ctx, spec, s.request);
       for (const e of v.render.errors) widgetFeedback.push(`- console error: ${e}`);
       if (v.render.judge && !v.render.judge.ok) widgetFeedback.push(`- screenshot review: ${v.render.judge.reason}`);
-      await trace(s, `Loaded the example in a browser: ${v.render.errors.length} errors; screenshot review: ${v.render.judge?.reason ?? "skipped"}`, MODELS.spark);
+      if (v.render.unavailable) await trace(s, `Browser test unavailable (${v.render.unavailable}); the example's math was checked in code`);
+      else await trace(s, `Loaded the example in a browser: ${v.render.errors.length} errors; screenshot review: ${v.render.judge?.reason ?? "skipped"}`, MODELS.spark);
       step(s, 5, widgetFeedback.length ? "failed" : "done");
     } else if (s.widgetError) {
       widgetFeedback.push(`- ${s.widgetError}`);
@@ -339,7 +340,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
     if (s.widget && widgetOk) {
       ops.push({ op: "insertAfter", blockId: last, block: s.widget });
       summary.push("Added 1 interactive example");
-      summary.push("Example ran without errors");
+      summary.push(s.verification?.render?.unavailable ? "Example's math checked in code" : "Example ran without errors");
     } else if (s.intent?.addWidget) {
       summary.push("Could not build an example that passed every check, so none was added");
     }
@@ -348,9 +349,12 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
     return { ops, after, summary };
   }
 
-  async function review(s: S): Promise<Partial<S>> {
+  async function review(s: S, config?: { configurable?: Record<string, unknown> }): Promise<Partial<S>> {
     if (!s.ops.length) return { decision: "undo" };
-    emit({ type: "run.waiting", runId: s.runId, summary: s.summary, section: s.after!, before: s.before });
+    // on resume LangGraph re-runs this node; only announce the pause the first time
+    const pad = (config?.configurable as { __pregel_scratchpad?: { resume?: unknown[]; nullResume?: unknown } } | undefined)?.__pregel_scratchpad;
+    const resuming = Boolean(pad?.resume?.length) || pad?.nullResume !== undefined;
+    if (!resuming) emit({ type: "run.waiting", runId: s.runId, summary: s.summary, section: s.after!, before: s.before });
     const decision = interrupt({ summary: s.summary }) as string;
     return { decision };
   }

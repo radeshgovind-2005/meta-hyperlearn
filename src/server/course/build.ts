@@ -139,7 +139,7 @@ export async function writeSection(
         role: "user",
         content: [
           `Section: "${args.title}" (concept: ${args.concept}). Earlier sections: ${args.previousTitles.join("; ") || "none"}.`,
-          "Write 3–6 text blocks that teach it in order, then exactly 1 exercise block.",
+          "Write 3–6 text blocks that teach it in order, then exactly 1 exercise block: ONE new question about this section only (parts (a)/(b) allowed), not a copy of the past exam and not a list of questions.",
           args.examStyle ? `The exercise must follow this exam style:\n${examStyleText(args.examStyle, args.examName)}` : "The exercise should check understanding with a short worked answer.",
           args.feedback ? `Fix these problems from the last attempt:\n${args.feedback}` : "",
           "",
