@@ -68,7 +68,7 @@ async function plan(ctx: AiCtx, args: { title: string; text: string; request?: s
         content: [
           `Page title: "${args.title}"`,
           args.request ? `The student asked for: "${args.request}"` : "",
-          args.feedback ? `Your last picture was rejected: ${args.feedback}\nMake the subject simpler and more literal.` : "",
+          args.feedback ? `Your last picture was rejected: ${args.feedback}\nSwitch to an everyday analogy: no axes, grids, coordinates, vectors or exact geometry, and no more than three objects.` : "",
           asData("page text", args.text),
         ].filter(Boolean).join("\n\n"),
       },
@@ -76,7 +76,7 @@ async function plan(ctx: AiCtx, args: { title: string; text: string; request?: s
   });
 }
 
-async function judge(ctx: AiCtx, image: GeneratedImage, args: { title: string; subject: string }) {
+async function judge(ctx: AiCtx, image: GeneratedImage, args: { title: string }) {
   let bin = "";
   for (let i = 0; i < image.bytes.length; i += 0x8000) bin += String.fromCharCode(...image.bytes.subarray(i, i + 0x8000));
   return chatJson(ctx, {
@@ -92,7 +92,7 @@ async function judge(ctx: AiCtx, image: GeneratedImage, args: { title: string; s
         content: [
           {
             type: "text",
-            text: `This picture goes at the top of the course page "${args.title}". It was meant to show: ${args.subject}\nAnswer ok=true if it clearly relates to that idea, looks clean and is suitable for a textbook. It is an illustration, not a technical drawing, so do not reject it for imprecise geometry or proportions. Answer ok=false only if it is unrelated, confusing, shows garbled or misspelled text, a watermark, a realistic face, or looks broken. Give a one-sentence reason.`,
+            text: `This picture goes at the top of the course page "${args.title}". It is an illustration, not a technical drawing. Answer ok=true if a student would find it a relevant, clean picture for that topic, even if it is an analogy or simplified. Answer ok=false only if it is unrelated to the topic, shows garbled or misspelled text, a watermark, a realistic face, or looks broken. Give a one-sentence reason.`,
           },
           { type: "image_url", image_url: { url: `data:${image.mime};base64,${btoa(bin)}` } },
         ],
@@ -130,7 +130,7 @@ export async function makeIllustration(
   for (let attempt = 1; attempt <= 2; attempt++) {
     const p = await plan(ctx, { title: args.title, text, request: args.request, feedback });
     const image = await generateImage(ctx, brief(p.subject));
-    const verdict = await judge(ctx, image, { title: args.title, subject: p.subject });
+    const verdict = await judge(ctx, image, { title: args.title });
     reason = verdict.reason;
     if (verdict.ok) {
       const block: FigureBlock = { id: args.blockId ?? randomId("f"), kind: "figure", r2Key: await storeImage(env, image), caption: p.caption.trim(), cites, generated: true };
