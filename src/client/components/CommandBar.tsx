@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useApp } from "../lib/app";
@@ -8,7 +8,7 @@ import { ArrowUp, Close, Mic } from "./Icons";
 import { Md } from "./Md";
 
 /** The "Ask, or tell HyperLearn what to do" bar, pinned to the bottom of every screen. */
-export function CommandBar({ placeholder }: { placeholder?: string }) {
+export function CommandBar({ placeholder, micTrigger = 0, speakAnswers = false, onAnswered }: { placeholder?: string; micTrigger?: number; speakAnswers?: boolean; onAnswered?: () => void }) {
   const { pageContext, toast } = useApp();
   const navigate = useNavigate();
   const [text, setText] = useState("");
@@ -26,8 +26,19 @@ export function CommandBar({ placeholder }: { placeholder?: string }) {
     setAnswer(null);
     try {
       const r = await api<TutorResult>("/api/tutor", { body: { text: q, courseId: pageContext.courseId, sectionId: pageContext.sectionId } });
-      if (r.kind === "answer") setAnswer(r);
-      else setNote(await runAction(r, pageContext, navigate, toast));
+      if (r.kind === "answer") {
+        setAnswer(r);
+        // in Listen mode the answer is spoken too, so the student can keep their eyes off the screen
+        if (speakAnswers && window.speechSynthesis) {
+          const u = new SpeechSynthesisUtterance(r.md.replace(/\[\^?\d+\]|[*_`$#>]/g, ""));
+          u.onend = () => onAnswered?.();
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(u);
+        } else onAnswered?.();
+      } else {
+        setNote(await runAction(r, pageContext, navigate, toast));
+        onAnswered?.();
+      }
       setText("");
     } catch (e) {
       setNote((e as Error).message);
@@ -59,6 +70,13 @@ export function CommandBar({ placeholder }: { placeholder?: string }) {
       setNote("Microphone access was blocked.");
     }
   }
+
+  // Listen mode's "Ask by voice" opens the microphone here
+  const toggleRef = useRef(toggleMic);
+  toggleRef.current = toggleMic;
+  useEffect(() => {
+    if (micTrigger > 0) void toggleRef.current();
+  }, [micTrigger]);
 
   const ph =
     placeholder ??

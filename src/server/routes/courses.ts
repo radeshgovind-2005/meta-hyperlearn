@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { listenScript } from "../course/listen";
 import type { AppEnv, Env } from "../env";
 import type { Block, Section } from "../../shared/types";
 import { BlockSchema } from "../../shared/types";
@@ -199,6 +200,19 @@ export const courses = new Hono<AppEnv>()
       items: results.map((r) => ({ ...r, trace: r.trace ? JSON.parse(r.trace as string) : [], models: r.models ? JSON.parse(r.models as string) : [], byYou: r.author_id === userId })),
       ownChanges: own,
     });
+  })
+  .post("/:id/sections/:sectionId/listen", async (c) => {
+    // a spoken script for Listen mode, written by Muse Spark and read by the browser voice
+    const userId = c.get("userId");
+    const access = await courseAccess(c.env, c.req.param("id"), userId);
+    if (!access) return c.json({ error: "Not found" }, 404);
+    try {
+      const section = await loadSection(c.env, access.course.id, c.req.param("sectionId"), { userId });
+      const ctx = await getAiCtx(c.env, userId);
+      return c.json(await listenScript(c.env, ctx, section.title, section.blocks));
+    } catch (err) {
+      return errorResponse(c, err);
+    }
   })
   .post("/:id/restore", async (c) => {
     const userId = c.get("userId");
