@@ -26,7 +26,7 @@ Record the 3-minute video, post on X, and submit before Wed Nov 4, 9:00 PM ET. E
 - Verified on production (Worker version `02dfa257-edc5-4fb5-9162-58819c4d40b5`) with Playwright on the demo course: two stacked changes persisted across reload, Undo restored the original, and the test overlay was removed afterwards.
 
 ## Last deploy
-2026-11-02 ~20:40 UTC (widgets, question types, waiting, Listen). Previous: 2026-11-02 19:05 UTC (version 02dfa257) · Worker `meta-hyperlearn` on https://hyperlearn.radesh-govind.com (Workers Free plan) and `hyperlearn-widgets` on https://hyperlearn-widgets.radesh-govind.com · `/api/health` ok (D1, R2, Vectorize, Meta API, quota) · demo course `crs_qdhs2ck5wt` seeded (4 sources, 8 sections).
+2026-11-02 ~20:45 UTC, Worker version `6b0dc3c7-df33-4993-ac21-d6768951fa34` (widgets, question types, waiting, Listen). Previous: 2026-11-02 19:05 UTC (version 02dfa257) · Worker `meta-hyperlearn` on https://hyperlearn.radesh-govind.com (Workers Free plan) and `hyperlearn-widgets` on https://hyperlearn-widgets.radesh-govind.com · `/api/health` ok (D1, R2, Vectorize, Meta API, quota) · demo course `crs_qdhs2ck5wt` seeded (4 sources, 8 sections).
 
 ## Live UI pass (2026-11-02, signed in on production)
 Checked against design/screens: Sign in, Onboarding key, Empty library, Outline, Course reader (citations + source highlight), Mutate (ask → live steps → done with vector2d widget → Keep as overlay), Practice (grading → adapt re-plan → Keep), adapted Outline, History, Share (non-owner copy + owner invite), Invite (public), Settings AI and usage, Source, Palette.
