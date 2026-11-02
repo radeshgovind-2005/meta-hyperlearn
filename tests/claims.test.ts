@@ -38,7 +38,7 @@ describe("plot widgets stay interactive", () => {
 
   it("keeps one y-range across every slider value", () => {
     const r = plotRange(PlotParams.parse(base));
-    expect(r.yMax).toBeGreaterThanOrEqual(400);
+    expect(r.yMax).toBeGreaterThanOrEqual(500);
     expect(r.yMin).toBeLessThanOrEqual(0);
   });
 
@@ -56,5 +56,12 @@ describe("plot widgets stay interactive", () => {
 
   it("makes round ticks", () => {
     expect(niceTicks(0, 500, 5)).toEqual([0, 100, 200, 300, 400, 500]);
+  });
+});
+
+describe("plot range with an asymptote", () => {
+  it("trims a spike instead of flattening the curve", () => {
+    const r = plotRange(PlotParams.parse({ expr: "1/x", xMin: -5, xMax: 5 }));
+    expect(r.yMax).toBeLessThan(1000);
   });
 });

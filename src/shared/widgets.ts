@@ -120,9 +120,12 @@ export function plotRange(p: PlotParams): { yMin: number; yMax: number } {
   }
   if (!ys.length) return { yMin: -1, yMax: 1 };
   ys.sort((a, b) => a - b);
-  // ignore the most extreme 2% so one asymptote does not flatten everything else
-  let lo = ys[Math.floor(ys.length * 0.02)];
-  let hi = ys[Math.ceil(ys.length * 0.98) - 1];
+  // show the whole curve unless one asymptote would flatten everything else
+  const p2 = ys[Math.floor(ys.length * 0.02)];
+  const p98 = ys[Math.ceil(ys.length * 0.98) - 1];
+  const spread = Math.max(1e-9, p98 - p2);
+  let lo = ys[0] < p2 - 3 * spread ? p2 : ys[0];
+  let hi = ys[ys.length - 1] > p98 + 3 * spread ? p98 : ys[ys.length - 1];
   lo = Math.min(0, lo);
   hi = Math.max(0, hi);
   if (hi - lo < 1e-9) { hi += 1; lo -= 1; }
