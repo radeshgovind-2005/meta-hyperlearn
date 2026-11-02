@@ -103,7 +103,7 @@ function resolveSpec(type: QType, raw: unknown, regions: Map<string, RegionInfo>
 export async function generateQuestions(
   env: Env,
   ctx: AiCtx,
-  args: { userId: string; courseId: string; sectionIds: string[]; types: QType[]; focusConcept?: string; avoid?: string[] },
+  args: { userId: string; courseId: string; sectionIds: string[]; types: QType[]; focusConcept?: string; avoid?: string[]; feedback?: string },
 ): Promise<Omit<PracticeQuestion, "ord">[]> {
   const sections = await Promise.all(args.sectionIds.map((id) => loadSection(env, args.courseId, id, { userId: args.userId })));
   const material = sections.map((s) => asData(`section ${s.id}: ${s.title}`, s.blocks.map(blockToText).join("\n\n"))).join("\n");
@@ -125,6 +125,9 @@ export async function generateQuestions(
         `Shapes for specJson, by type:\n${[...new Set(types)].map((t) => `- ${t} (${QTYPE_LABEL[t]}): ${SPEC_DOCS[t]}`).join("\n")}`,
         exam?.style ? `Match this exam's command words, notation and difficulty in every prompt:\n${examStyleText(exam.style, exam.filename)}` : "Use the language of a university exam.",
         "Use new numbers and examples, not the exam's own questions. Prompts contain no question numbers and no exam header. Plain text math like [[4, 1], [2, 3]] and λ² − 7λ + 10. sectionId must be one of the section ids below.",
+        `Only ${[...MODEL_GRADED].join(", ")} prompts may say "show all work" or carry points. Every other prompt is one direct instruction for that interaction (e.g. "Match each matrix to its determinant.", "Click the step with the mistake."), never asking for written working the student cannot type.`,
+        "Check every number in specJson by computing it yourself; a wrong answer key is worse than no question.",
+        args.feedback ? `Your previous attempt at these questions was rejected:\n${args.feedback}\nFix exactly these problems.` : "",
         args.avoid?.length ? `Do not repeat these questions:\n${args.avoid.map((a) => `- ${a.slice(0, 160)}`).join("\n")}` : "",
         regionText,
         material,
@@ -134,19 +137,31 @@ export async function generateQuestions(
   const out = await chatJson(ctx, { model: MODELS.spark, name: "practice-questions", schema: QuestionsSchema, schemaName: "questions", reasoningEffort: types.length === 1 ? "low" : "medium", maxTokens: 1500 + 1300 * types.length, messages });
   const valid = new Map(sections.map((s) => [s.id, s]));
   const rows: Omit<PracticeQuestion, "ord">[] = [];
+  const failed: { type: QType; error: string }[] = [];
   out.questions.forEach((q, k) => {
     const type = (QTYPES as readonly string[]).includes(q.type) ? (q.type as QType) : types[k] ?? "short";
     let spec: Spec;
     try {
       spec = resolveSpec(type, MODEL_GRADED.has(type) ? {} : safeParseJson(q.specJson), byId);
-    } catch {
-      // a broken spec is dropped rather than shown half-working
+    } catch (err) {
+      // a broken spec is never shown half-working: it is rewritten once, then dropped
+      failed.push({ type, error: (err as Error).message.slice(0, 300) });
       return;
     }
     const sec = valid.get(q.sectionId) ?? sections[0];
     const cites: Cite[] = sec.blocks.flatMap((b) => b.cites).slice(0, 3);
     rows.push({ id: randomId("q"), prompt: q.prompt, answer: q.answer, rubric: q.rubric, concept: q.concept, section_id: sec.id, style_of: exam?.id ?? null, cites: JSON.stringify(cites), qtype: type, spec: JSON.stringify(spec) });
   });
+  for (const t of types.slice(out.questions.length)) failed.push({ type: t, error: "this question was missing from your output" });
+  if (failed.length && !args.feedback) {
+    const retry = await generateQuestions(env, ctx, {
+      ...args,
+      types: failed.map((f) => f.type),
+      avoid: [...(args.avoid ?? []), ...rows.map((r) => r.prompt)],
+      feedback: failed.map((f) => `- ${f.type}: ${f.error}`).join("\n"),
+    }).catch(() => []);
+    rows.push(...retry);
+  }
   return rows;
 }
 
