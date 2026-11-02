@@ -6,12 +6,14 @@ const appearance = {
   variables: { colorPrimary: "#0A5CFF", colorText: "#1C2B33", colorTextSecondary: "#5B6B7A", colorInputBackground: "#FFFFFF", fontFamily: "Figtree, sans-serif", fontSize: "15px", borderRadius: "8px" },
   elements: {
     rootBox: { width: "100%" },
-    cardBox: { boxShadow: "none", border: "none", width: "100%" },
-    card: { boxShadow: "none", border: "none", padding: 0, background: "transparent" },
+    // overflow visible + top padding leave room for Clerk's "Last used" badge, which sits over the button's top-right corner
+    cardBox: { boxShadow: "none", border: "none", width: "100%", overflow: "visible" },
+    card: { boxShadow: "none", border: "none", padding: "10px 0 0", background: "transparent" },
     header: { display: "none" },
     footer: { background: "transparent", "& > div:last-child": { display: "none" } },
     socialButtonsBlockButton: { height: 44, borderRadius: 8, border: "1px solid #D4D9DE", boxShadow: "none" },
-    socialButtons: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 },
+    // returning users get the last-used provider in its own row; auto-fit lets a lone button span the row
+    socialButtons: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(0, 1fr))", gap: 10 },
     formFieldInput: { height: 44, borderRadius: 8, border: "1px solid #D4D9DE", boxShadow: "none" },
     formButtonPrimary: { height: 44, borderRadius: 999, fontWeight: 600, fontSize: 15, boxShadow: "none", textTransform: "none" as const },
     dividerLine: { background: "#E3E6EA" },
