@@ -5,7 +5,7 @@ const r1 = (n: number) => Math.round(n * 10) / 10;
 const fmt = (n: number) => (Math.abs(n - Math.round(n)) < 1e-9 ? String(Math.round(n)) : n.toFixed(2));
 
 /** v turns with a slider; Av is drawn from the same origin. In eigen mode it says when they line up. */
-export function Vector2d({ params }: { params: Vector2dParams }) {
+export function Vector2d({ params, onState }: { params: Vector2dParams; onState?: (s: { theta: number }) => void }) {
   const A = params.A;
   const [theta, setTheta] = useState(params.startAngle ?? 20);
   const [found, setFound] = useState<number[]>([]);
@@ -40,6 +40,7 @@ export function Vector2d({ params }: { params: Vector2dParams }) {
     const near = snaps.find((s) => Math.abs(s - val) < 2.5);
     const next = near !== undefined ? Math.round(near * 10) / 10 : val;
     setTheta(next);
+    onState?.({ theta: next });
     // an eigen-direction counts once, whichever way v points along it
     if (near !== undefined) {
       const r = (next * Math.PI) / 180;

@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { niceTicks, plotFunction, plotGoalMet, plotRange, type PlotParams } from "@shared/widgets";
 
 const W = 460;
@@ -19,12 +19,15 @@ function fmt(n: number): string {
  * y = f(x) with sliders. The axes stay fixed over every slider setting, so moving a slider
  * visibly moves the curve; the faint dashed curve is where it started. The probe follows x.
  */
-export function Plot({ params }: { params: PlotParams }) {
+export function Plot({ params, onState }: { params: PlotParams; onState?: (s: { values: Record<string, number>; x: number }) => void }) {
   const initial = useMemo(() => Object.fromEntries(params.sliders.map((s) => [s.name, s.value])), [params]);
   const [vals, setVals] = useState<Record<string, number>>(initial);
   const [x, setX] = useState(params.xStart ?? params.xMin + (params.xMax - params.xMin) * 0.4);
   const baseId = useId();
   const svgRef = useRef<SVGSVGElement>(null);
+  const report = useRef(onState);
+  report.current = onState;
+  useEffect(() => report.current?.({ values: vals, x }), [vals, x]);
   const { yMin, yMax } = useMemo(() => plotRange(params), [params]);
   const sx = (v: number) => L + ((v - params.xMin) / (params.xMax - params.xMin)) * (W - L - R);
   const sy = (v: number) => T + (1 - (Math.min(Math.max(v, yMin - (yMax - yMin)), yMax + (yMax - yMin)) - yMin) / (yMax - yMin)) * (H - T - B);

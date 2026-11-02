@@ -223,3 +223,36 @@ export function checkClaims(template: string, params: Record<string, unknown>, c
     }
   });
 }
+
+/** Rewrites typed maths (λ² − 7λ + 10, 3·x) into mathjs syntax. */
+export function normalizeMath(s: string): string {
+  const greek: Record<string, string> = { λ: "lambda", μ: "mu", σ: "sigma", θ: "theta", α: "alpha", β: "beta", π: "pi", ω: "omega", Δ: "Delta" };
+  return s
+    .replace(/[λμσθαβπωΔ]/g, (g) => ` ${greek[g]} `)
+    .replace(/²/g, "^2").replace(/³/g, "^3")
+    .replace(/[−–]/g, "-").replace(/[·×]/g, "*").replace(/÷/g, "/")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** True when two expressions agree at random points for every variable they use. */
+export function exprEquivalent(a: string, b: string): boolean {
+  // an equation "l = r" is compared as l − r
+  const side = (x: string) => (/[^<>=!]=[^=]/.test(x) ? x.split(/(?<![<>=!])=(?!=)/).map((p) => `(${p})`).join("-") : x);
+  a = side(a);
+  b = side(b);
+  try {
+    const ea = compile(normalizeMath(a));
+    const eb = compile(normalizeMath(b));
+    const vars = new Set([...exprSymbols(normalizeMath(a)), ...exprSymbols(normalizeMath(b))].filter((v) => !["pi", "e", "i"].includes(v)));
+    for (let k = 0; k < 6; k++) {
+      const scope = Object.fromEntries([...vars].map((v, j) => [v, 0.7 + ((k * 7 + j * 3) % 11) * 0.37]));
+      const ya = Number(ea.evaluate(scope));
+      const yb = Number(eb.evaluate(scope));
+      if (!Number.isFinite(ya) || !Number.isFinite(yb) || Math.abs(ya - yb) > 1e-6 * Math.max(1, Math.abs(ya))) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
