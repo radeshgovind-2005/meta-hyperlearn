@@ -9,7 +9,7 @@ import { MODELS } from "../ai/models";
 import type { Block, Cite, PatchOp, RunEvent, Section, TextBlock, WidgetBlock, WidgetSpec } from "../../shared/types";
 import { WidgetSpecSchema } from "../../shared/types";
 import { applyPatch } from "../../shared/patch";
-import { checkClaims, PlotParams, StepperParams, Vector2dParams, type ClaimResult } from "../../shared/widgets";
+import { checkClaims, PlotParams, StepperParams, Vector2dParams, widgetProblems, type ClaimResult } from "../../shared/widgets";
 import { chunkToCite, evidenceForCites, getChunks, searchChunks, type ChunkRow } from "../lib/chunks";
 import { randomId } from "../lib/crypto";
 import { verifySentences, type SentenceCheck } from "../verify/sentences";
@@ -231,6 +231,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
             `Templates:\n${TEMPLATE_DOCS}`,
             "Claims are mathjs boolean expressions over the params that state the facts the widget teaches; they are recomputed in code. For vector2d, A is available as a matrix (e.g. 'A * [1, 1] == 3 * [1, 1]', 'det(A) == 3'). For plot, f(x) is the plotted function with slider values (e.g. 'f(2) == 0'). Give 2–4 claims.",
             "Numbers must come from the chunks when they give an example; otherwise choose small integers.",
+            "The student must be able to DO what the title says. If the title says 'push the frequency', frequency is x (the probe the student drags along the curve) or a slider. Every slider must appear in expr. Give it a goal the student can reach by moving the controls, and name the axes with units.",
             DATA_RULE,
           ].join("\n"),
         },
@@ -283,6 +284,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
       step(s, 5, "active");
       const spec = s.widget.spec;
       if (spec.template !== "custom") {
+        for (const p of widgetProblems(spec.template, spec.params)) widgetFeedback.push(`- ${p}`);
         v.claims = checkClaims(spec.template, spec.params, spec.claims);
         for (const c of v.claims.filter((c) => !c.ok)) widgetFeedback.push(`- claim "${c.claim}" ${c.detail}`);
         await trace(s, `Recomputed ${v.claims.length} widget claims with mathjs: ${v.claims.filter((c) => c.ok).length} hold`);
@@ -402,7 +404,8 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
 
 const TEMPLATE_DOCS = `
 - vector2d: a 2x2 matrix acting on a vector the student turns with a slider. params: {"A": [[a,b],[c,d]], "mode": "eigen" | "transform", "startAngle": degrees, "caption": "one line explaining what to look for"}. In eigen mode the widget says when v and Av lie on the same line and shows λ.
-- plot: y = f(x) with sliders for parameters. params: {"expr": "a*x^2 + b", "xMin": -5, "xMax": 5, "sliders": [{"name":"a","min":-3,"max":3,"step":0.5,"value":1}], "markers": [{"x": 1, "label": "root"}], "caption": "..."}.
+- vector2d also takes "goal": the task in eigen mode (default: find both eigen-directions). The student drags v; the widget counts the directions found.
+- plot: y = f(x). The student drags a probe along x and reads y live; sliders change parameters. Axes stay fixed over all slider values, so the curve visibly moves. params: {"expr": "k*x^3", "xMin": 0, "xMax": 5, "xLabel": "frequency (GHz)", "yLabel": "power (W)", "xStart": 1, "sliders": [{"name":"k","label":"chip constant","min":1,"max":4,"step":0.5,"value":2}], "markers": [{"x": 1, "label": "root"}], "goal": {"check": "f(x) >= 200", "text": "Push the frequency until power passes 200 W", "done": "Past 200 W: doubling f multiplied power by 8."}, "caption": "..."}. goal.check is a mathjs boolean over x, f and the slider names, and must be reachable.
 - stepper: a worked example revealed one step at a time. params: {"steps": [{"title": "Step 1", "md": "..."}]} (3–6 steps).
 - custom: a self-contained HTML document (inline CSS/JS only, no network) with paramsJson = {"html": "<!doctype html>..."}.`;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkClaims, eigen2 } from "../src/shared/widgets";
+import { checkClaims, eigen2, niceTicks, PlotParams, plotGoalMet, plotRange, widgetProblems } from "../src/shared/widgets";
 
 describe("checkClaims", () => {
   it("verifies true eigen claims for vector2d", () => {
@@ -30,5 +30,31 @@ describe("eigen2", () => {
   });
   it("returns nothing for a rotation", () => {
     expect(eigen2([[0, -1], [1, 0]])).toEqual([]);
+  });
+});
+
+describe("plot widgets stay interactive", () => {
+  const base = { expr: "k*x^3", xMin: 0, xMax: 5, sliders: [{ name: "k", min: 1, max: 4, step: 0.5, value: 2 }] };
+
+  it("keeps one y-range across every slider value", () => {
+    const r = plotRange(PlotParams.parse(base));
+    expect(r.yMax).toBeGreaterThanOrEqual(400);
+    expect(r.yMin).toBeLessThanOrEqual(0);
+  });
+
+  it("rejects a slider the curve ignores and an unreachable goal", () => {
+    expect(widgetProblems("plot", { ...base, expr: "2*x^3" })).toContain('slider "k" does not appear in expr, so moving it changes nothing');
+    expect(widgetProblems("plot", { ...base, goal: { check: "f(x) >= 10000", text: "t", done: "d" } }).join()).toMatch(/never be reached/);
+    expect(widgetProblems("plot", { ...base, goal: { check: "f(x) >= 200", text: "t", done: "d" } })).toEqual([]);
+  });
+
+  it("checks the goal for one widget state", () => {
+    const p = PlotParams.parse({ ...base, goal: { check: "f(x) >= 200", text: "t", done: "d" } });
+    expect(plotGoalMet(p, { k: 2 }, 5)).toBe(true);
+    expect(plotGoalMet(p, { k: 2 }, 3)).toBe(false);
+  });
+
+  it("makes round ticks", () => {
+    expect(niceTicks(0, 500, 5)).toEqual([0, 100, 200, 300, 400, 500]);
   });
 });

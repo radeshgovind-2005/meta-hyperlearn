@@ -215,3 +215,15 @@ ins { color: var(--success); background: #e7f6ed; text-decoration: none; }
   .auth-main { padding: 24px 16px; }
   .para { font-size: 18px; }
 }
+
+/* interactive examples */
+.widget-goal { font-size: 15px; font-weight: 500; color: var(--ink); background: var(--sidebar); border-radius: 8px; padding: 10px 14px; }
+.widget-goal.done { color: var(--success); background: #e8f5ee; }
+.plot-svg { flex: 1 1 320px; max-width: 480px; height: auto; border: 1px solid var(--border); border-radius: 8px; touch-action: none; cursor: crosshair; }
+.plot-grid { stroke: #eef0f3; stroke-width: 1; }
+.plot-axis { stroke: #a9b1ba; stroke-width: 1; }
+.plot-tick { font: 11px Figtree, sans-serif; fill: #5b6b7a; }
+.plot-name { font: 600 12px Figtree, sans-serif; fill: #3e4c59; }
+.plot-ghost { stroke: #a9b1ba; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.plot-probe-line { stroke: #1c2b33; stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.5; }
+.plot-readout { font-size: 16px; color: var(--ink); font-variant-numeric: tabular-nums; }

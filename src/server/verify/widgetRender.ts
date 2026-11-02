@@ -43,13 +43,25 @@ export async function renderAndJudge(env: Env, ctx: AiCtx, spec: WidgetSpec, req
         }
         await page.waitForSelector("[data-widget-ready]", { timeout: 10_000 });
       }
-      // interact once so handlers run
-      const control = await page.$("input[type=range], button");
-      if (control) {
-        const tag = await control.evaluate((el) => el.tagName);
-        if (tag === "INPUT") await control.evaluate((el) => { const i = el as unknown as HTMLInputElement; i.value = String((Number(i.min) + Number(i.max)) / 2); i.dispatchEvent(new Event("input", { bubbles: true })); i.dispatchEvent(new Event("change", { bubbles: true })); });
-        else await control.click();
-        await new Promise((r) => setTimeout(r, 300));
+      // move every slider and check that each one changes the picture
+      const ranges = await page.$$("input[type=range]");
+      if (!ranges.length) {
+        const button = await page.$("button");
+        if (button) await button.click();
+      }
+      for (const [k, control] of ranges.entries()) {
+        const before = (await page.screenshot({ encoding: "base64", type: "png" })) as string;
+        await control.evaluate((el) => {
+          const i = el as unknown as HTMLInputElement;
+          const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+          const target = Number(i.value) >= (Number(i.min) + Number(i.max)) / 2 ? Number(i.min) + (Number(i.max) - Number(i.min)) * 0.15 : Number(i.min) + (Number(i.max) - Number(i.min)) * 0.85;
+          setter.call(i, String(target));
+          i.dispatchEvent(new Event("input", { bubbles: true }));
+          i.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        await new Promise((r) => setTimeout(r, 250));
+        const after = (await page.screenshot({ encoding: "base64", type: "png" })) as string;
+        if (after === before) errors.push(`moving slider ${k + 1} did not change anything on screen`);
       }
       screenshot = (await page.screenshot({ encoding: "base64", type: "png" })) as string;
     } catch (err) {
