@@ -13,3 +13,4 @@ All work below was built during the Meta Global AI Developer Hackathon (deadline
 - 2026-11-02 — Share (follow with overlays, copy with pull updates), command bar router with tool calls, realtime voice proxy, research mode.
 - 2026-11-02 — React client for every design screen; widget templates (vector2d, plot, stepper) and sandboxed custom widgets on a separate origin.
 - 2026-11-02 — Original CC BY seed material: two lecture decks, a midterm, a synthetic lecture recording.
+- 2026-11-02 — Free-tier quota guard (R2 storage/ops, Vectorize, Workers AI, Browser Rendering) with contact message; privacy and terms pages; deployed to the custom domains on the Workers Free plan and seeded the demo course.

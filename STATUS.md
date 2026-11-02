@@ -1,6 +1,6 @@
 # Status
 
-**Current step:** deploy blocked on R2 enablement and Clerk instance choice (see BLOCKERS.md 1–2).
+**Current step:** deployed; live UI pass on the signed-in screens (needs a human sign-in on the production Clerk instance), then eval + README + tag.
 
 Verified locally against the real Meta API (2026-11-02): ingest of 4 sources (PDF positions, ASR turns, exam style) → course build (45/45 sentences supported) → mutate simplify + widget (5/5 sentences, mathjs claims, Keep → v2) → practice grading (caught the ad+bc sign error) → adapt (Wonder inserted a 4-min review, 9/9 sentences, Keep → v3).
 
@@ -16,4 +16,4 @@ Verified locally against the real Meta API (2026-11-02): ingest of 4 sources (PD
 5. README, tag v1.0.0.
 
 ## Last deploy
-None yet.
+2026-11-02 17:09 UTC · Worker `meta-hyperlearn` on https://hyperlearn.radesh-govind.com (Workers Free plan) and `hyperlearn-widgets` on https://hyperlearn-widgets.radesh-govind.com · `/api/health` ok (D1, R2, Vectorize, Meta API, quota) · demo course `crs_qdhs2ck5wt` seeded (4 sources, 8 sections).

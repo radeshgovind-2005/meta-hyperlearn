@@ -2,8 +2,8 @@
 
 | # | What | Why | Fallback in place | Status |
 |---|---|---|---|---|
-| 1 | R2 not enabled on the Cloudflare account | API error 10042 "Please enable R2 through the Cloudflare Dashboard" (needs billing acceptance) | D1, Vectorize, migrations done; deploy blocked until the bucket exists | Waiting on human |
-| 2 | Clerk keys are a production instance | Frontend API `clerk.radesh-govind.com` needs 5 CNAMEs + Verify in Clerk; wrangler OAuth token is `zone:read` only, so DNS can't be added from here; production keys also refuse localhost | Use development instance keys, or add the CNAMEs and click Verify | Waiting on human |
+| 1 | R2 / Workers on the free plan | Owner wants to stay on free tiers | App-wide quota guard at ~80% of R2, Vectorize, Workers AI and Browser Rendering free limits; uploads pause with a contact@radesh-govind.com message | Resolved |
+| 2 | Clerk production instance | Needs DNS + Verify (done by owner); production keys refuse localhost, so local UI tests need a dev instance | Live site works; Google sign-in still in Google "Testing" mode until its branding is published (privacy URL now at /privacy) | Partly open (Google publishing) |
 | 3 | `OPEN_MODEL_*` points at the Meta Model API (`muse-spark-1.3`), not an open-weight endpoint | Modal endpoint not provided | Verifier runs on Muse Spark and is labelled "Muse Spark (verifier)", never "open weights" | Open |
 | 9 | Existing Worker named `hyperlearn` in the account (deployed Oct 30 – Nov 1) | Would be overwritten | This project deploys as `meta-hyperlearn`; the old Worker is untouched | Resolved |
 | 4 | Muse Code as a model | dev.meta.ai lists no API model id for Muse Code (it is a CLI product) | Custom widgets are written by `muse-spark-1.3` and served from the sandbox origin | Permanent; noted in README |
