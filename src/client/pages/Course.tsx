@@ -4,7 +4,8 @@ import type { Block, Cite, RunEvent, Section } from "@shared/types";
 import { api, ApiError, sessionToken, streamEvents, wsUrl } from "../lib/api";
 import { useApi } from "../lib/hooks";
 import { useApp, usePageContext } from "../lib/app";
-import { CiteMarks, ExerciseCard, FigureView, WidgetCard, type SourceInfo } from "../components/Blocks";
+import { CiteMarks, ExerciseCard, FigureView, HeroPlaceholder, WidgetCard, type SourceInfo } from "../components/Blocks";
+import { canIllustrate, heroOf } from "@shared/hero";
 import { SourcePane } from "../components/SourcePane";
 import { CommandBar } from "../components/CommandBar";
 import { Md } from "../components/Md";
@@ -36,12 +37,25 @@ type MutState =
   | ({ stage: "undoing" } & Change);
 type RunDone = Extract<RunEvent, { type: "run.done" }>;
 
-const SUGGESTIONS = ["Simpler", "Interactive example", "More examples", "Exam focus"];
 const SUGGESTION_TEXT: Record<string, string> = {
   Simpler: "This is too complex. Simplify it.",
   "Interactive example": "Give me an interactive example I can play with.",
+  "Draw it": "Draw an illustration of this idea.",
   "More examples": "Show me more worked examples.",
   "Exam focus": "Focus this on what the exam asks.",
+};
+const PICTURE_SUGGESTIONS: Record<string, string> = {
+  "Draw it again": "Draw a different picture for this idea.",
+  "Simpler picture": "Draw a simpler, more literal picture of this idea.",
+  "Everyday analogy": "Draw an everyday analogy for this idea.",
+};
+
+// one picture request at a time per tab, so two commits never race on the course version
+let pictureQueue: Promise<unknown> = Promise.resolve();
+const queuePicture = <T,>(job: () => Promise<T>): Promise<T> => {
+  const run = pictureQueue.then(job, job);
+  pictureQueue = run.catch(() => undefined);
+  return run;
 };
 
 export function numberSections(sections: OutlineSection[]): Map<string, string> {
@@ -99,6 +113,32 @@ export function CoursePage() {
     setListening(null);
     setListen("off");
   }, [sectionId]);
+
+  // every page opens with a picture; pages built before pictures existed get theirs on first view
+  const [pictures, setPictures] = useState<Record<string, { state: "drawing" | "failed"; message?: string }>>({});
+  const triedPictures = useRef(new Set<string>());
+  const live = useRef({ sectionId, reloadSection, reloadOutline });
+  live.current = { sectionId, reloadSection, reloadOutline };
+  const drawPicture = useCallback(
+    async (sid: string) => {
+      setPictures((p) => ({ ...p, [sid]: { state: "drawing" } }));
+      try {
+        await queuePicture(() => api(`/api/courses/${courseId}/sections/${sid}/illustrate`, { body: {} }));
+        setPictures(({ [sid]: _done, ...rest }) => rest);
+        if (live.current.sectionId === sid) await live.current.reloadSection();
+        void live.current.reloadOutline();
+      } catch (e) {
+        setPictures((p) => ({ ...p, [sid]: { state: "failed", message: (e as Error).message } }));
+      }
+    },
+    [courseId],
+  );
+  useEffect(() => {
+    if (!section || section.id !== sectionId || mut.stage !== "idle") return;
+    if (heroOf(section.blocks) || !canIllustrate(section.blocks) || triedPictures.current.has(sectionId)) return;
+    triedPictures.current.add(sectionId);
+    void drawPicture(sectionId);
+  }, [section, sectionId, mut.stage, drawPicture]);
 
   // mark as read after a short while on the page
   useEffect(() => {
@@ -388,6 +428,10 @@ export function CoursePage() {
           )}
 
           {sec.loading && !section && <Skeleton title lines={6} />}
+          {section && !heroOf(blocks) && pictures[sectionId]?.state === "drawing" && <HeroPlaceholder />}
+          {section && !heroOf(blocks) && pictures[sectionId]?.state === "failed" && (
+            <HeroPlaceholder failed message={pictures[sectionId].message} onRetry={() => void drawPicture(sectionId)} />
+          )}
           {blocks.map((b, i) => {
             const isSel = selected === b.id;
             const working = mut.stage === "working" && mut.blockId === b.id;
@@ -426,15 +470,34 @@ export function CoursePage() {
                     <ExerciseCard block={b} styleName={b.styleOf ? sources[b.styleOf]?.filename ?? exam?.filename : undefined} />
                   </div>
                 ) : (
-                  <FigureView block={b} url={sec.data?.figures[b.r2Key]} />
+                  <FigureView
+                    block={b}
+                    url={sec.data?.figures[b.r2Key]}
+                    selected={isSel}
+                    changed={changed(b.id)}
+                    onSelect={() => {
+                      if (mut.stage !== "idle" && mut.stage !== "ask" && mut.stage !== "kept") return;
+                      setSelected(b.id);
+                      setActiveCite(0);
+                    }}
+                    menu={
+                      b.generated && (mut.stage === "idle" || mut.stage === "kept") ? (
+                        <span className="block-menu">
+                          <button type="button" className="mini-btn" onClick={(e) => { e.stopPropagation(); setSelected(b.id); setMut({ stage: "ask", blockId: b.id, request: "Draw a different picture for this idea." }); }}>
+                            Change this
+                          </button>
+                        </span>
+                      ) : undefined
+                    }
+                  />
                 )}
-                {showForm && <MutateForm initial={mut.request} onCancel={() => setMut({ stage: "idle" })} onRun={(r) => void startMutation(b.id, r)} />}
+                {showForm && <MutateForm kind={b.kind} initial={mut.request} onCancel={() => setMut({ stage: "idle" })} onRun={(r) => void startMutation(b.id, r)} />}
                 {working && mut.stage === "working" && (
                   <Working
                     className="mutate-working"
                     label={mut.steps.find((s) => s.status === "active")?.label ?? "Understanding your request"}
                     since={mut.since}
-                    usually={/example|widget|interactive/i.test(mut.request) ? "45 s" : "20 s"}
+                    usually={/example|widget|interactive|picture|image|illustrat|draw|diagram/i.test(mut.request) ? "45 s" : "20 s"}
                   />
                 )}
                 {b.id === decisionAnchor && <Decision />}
@@ -456,6 +519,7 @@ export function CoursePage() {
             <li>Show 3 worked examples</li>
             <li>Turn this into exam questions</li>
             <li>Give me an interactive example</li>
+            <li>Draw a picture of it</li>
           </ul>
         </aside>
       ) : mut.stage === "working" || hasChange ? (
@@ -508,7 +572,9 @@ function groupByChapter(sections: OutlineSection[]): [string, OutlineSection[]][
   return [...map.entries()];
 }
 
-function MutateForm({ initial, onRun, onCancel }: { initial: string; onRun: (r: string) => void; onCancel: () => void }) {
+function MutateForm({ kind, initial, onRun, onCancel }: { kind: Block["kind"]; initial: string; onRun: (r: string) => void; onCancel: () => void }) {
+  const picture = kind === "figure";
+  const suggestions = picture ? PICTURE_SUGGESTIONS : SUGGESTION_TEXT;
   const [text, setText] = useState(initial || "This is too complex. Simplify it and give me an interactive example I can play with.");
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -518,18 +584,18 @@ function MutateForm({ initial, onRun, onCancel }: { initial: string; onRun: (r: 
   return (
     <form
       className="mutate-form"
-      aria-label="Change this paragraph"
+      aria-label={picture ? "Change this picture" : "Change this paragraph"}
       onSubmit={(e) => {
         e.preventDefault();
         if (text.trim()) onRun(text.trim());
       }}
       onKeyDown={(e) => e.key === "Escape" && onCancel()}
     >
-      <label htmlFor="ask" style={{ fontSize: 13, fontWeight: 500, color: "var(--body)" }}>Change this paragraph</label>
+      <label htmlFor="ask" style={{ fontSize: 13, fontWeight: 500, color: "var(--body)" }}>{picture ? "Change this picture" : "Change this paragraph"}</label>
       <textarea ref={ref} id="ask" rows={2} className="textarea" style={{ resize: "none", fontSize: 15 }} value={text} onChange={(e) => setText(e.target.value)} />
       <div className="row" style={{ gap: 6 }}>
-        {SUGGESTIONS.map((s) => (
-          <button key={s} type="button" className="chip" onClick={() => setText(SUGGESTION_TEXT[s])}>
+        {Object.keys(suggestions).map((s) => (
+          <button key={s} type="button" className="chip" onClick={() => setText(suggestions[s])}>
             {s}
           </button>
         ))}

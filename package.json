@@ -17,7 +17,9 @@
     "db:migrate:remote": "wrangler d1 migrations apply hyperlearn --remote",
     "seed:make": "node scripts/make-seed.mjs",
     "seed:prod": "node scripts/seed.mjs --remote",
-    "seed:local": "node scripts/seed.mjs --local"
+    "seed:local": "node scripts/seed.mjs --local",
+    "illustrate:prod": "node scripts/illustrate.mjs --remote",
+    "illustrate:local": "node scripts/illustrate.mjs"
   },
   "dependencies": {
     "@clerk/backend": "3.26.5",

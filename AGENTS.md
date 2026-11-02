@@ -120,7 +120,7 @@ The Meta Model API is OpenAI-compatible (`Authorization: Bearer <key>`, base `ht
 | Muse Wonder (`muse-wonder-1.0`) | Re-plan the learning path after practice (call rarely, it is expensive) |
 | SAM 3.1 (`sam-3.1`) | Cut figures/diagrams out of slide page images into figure blocks |
 | Muse Voice Transcribe (`muse-voice-transcribe-1.0`) | Lecture recordings → timestamped text (audio citations); realtime mic input for the command bar |
-| Muse Image (`muse-image-1.0`) | Optional: "Analogy" illustrations, always labelled "generated" |
+| Muse Image (`muse-image-1.0`) | A picture at the top of every page, and illustrations on request when no widget template fits (via `POST /images/generations`); Muse Spark writes the brief and reviews the picture; always labelled "generated" |
 | Muse Code | Custom interactive widgets when no template fits |
 | Muse Spark Open or Muse Glimmer (open weights, via `OPEN_MODEL_*`) | Independent verifier: checks each sentence against its cited chunk; bulk flashcards |
 

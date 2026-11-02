@@ -31,7 +31,7 @@ HyperLearn turns a student's own material into a course:
 | **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`) | Lecture recordings → timestamped passages (audio citations); realtime mic input for the command bar, "Ask by voice" in Listen mode and "explain it out loud" practice answers |
 | **SAM 3.1** (`sam-3.1`) | Segmentation client and parser for cutting figures out of slide pages |
 | **Verifier slot** (`OPEN_MODEL_*`, OpenAI-compatible) | Checks every rewritten sentence against its cited passage. Built for an open-weight model (Muse Spark Open on Modal, or Muse Glimmer via vLLM): set a base URL + model id and it switches over. The live deployment currently points it at Muse Spark on the Meta Model API, and the UI labels it that way |
-| Muse Image | Not used in v1 |
+| Muse Image (`muse-image-1.0`) | Draws the picture at the top of every page (in one house style, labelled "drawn by Muse Image") and any illustration a student asks for when no interactive template fits; Muse Spark briefs it and then looks at the result before it is shown |
 
 Three things the Meta Model API does not offer, and what we used instead: there is **no text-to-speech model** (Muse Voice Transcribe is speech to text only), so Listen runs the open-weight Kokoro-82M voice on the student's GPU in the browser (ONNX Runtime WebGPU, ~330 MB downloaded once and cached) reading a script Muse Spark writes, with the browser voice as fallback; there is **no embeddings endpoint**, so retrieval uses Workers AI `bge-base-en-v1.5` in Cloudflare Vectorize; **Muse Code has no API model id** (it is a coding CLI), so custom HTML widgets are written by Muse Spark and run in a sandbox on a separate origin.
 

@@ -18,14 +18,16 @@ import { commitSection } from "../lib/blocks";
 import { recordRunTrace } from "../lib/runs";
 import { adjustMastery, getMastery } from "../lib/mastery";
 import { fmtTime } from "../course/build";
+import { illustrationsEnabled, makeIllustration } from "../course/illustrate";
+import type { FigureBlock } from "../../shared/hero";
 
 export const MUTATE_STEPS = [
   "Understanding your request",
   "Reading the sources",
   "Rewriting the paragraph",
-  "Building the interactive example",
+  "Building the example",
   "Checking each sentence against its source",
-  "Testing the example in a browser",
+  "Testing the example",
 ];
 
 const IntentSchema = z.object({
@@ -34,6 +36,7 @@ const IntentSchema = z.object({
   moreExamples: z.boolean().describe("only if the student explicitly asks for more or worked examples"),
   examFocus: z.boolean(),
   analogy: z.boolean(),
+  addImage: z.boolean().describe("the student asks for a picture, illustration, drawing or diagram, or wants a selected picture redrawn or changed"),
   tooComplex: z.boolean().describe("the student says it is too hard / confusing"),
   rewrite: z.boolean().describe("the selected text itself should be rewritten"),
   notes: z.string().describe("anything else the student asked for, in a few words"),
@@ -45,7 +48,7 @@ const TextOutSchema = z.object({
 });
 
 const WidgetChoiceSchema = z.object({
-  template: z.enum(["vector2d", "plot", "stepper", "custom"]),
+  template: z.enum(["vector2d", "plot", "stepper", "custom", "illustration"]),
   title: z.string().describe("short imperative title, e.g. 'Try it: turn v until A stops turning it'"),
   paramsJson: z.string().describe("JSON string of the template params"),
   claims: z.array(z.string()).describe("mathjs boolean expressions that must hold for the params, e.g. 'A * [1, 1] == 3 * [1, 1]'"),
@@ -75,6 +78,8 @@ const MutateState = Annotation.Root({
   mastery: Annotation<number>({ reducer: (_, b) => b, default: () => 0.5 }),
   textBlocks: Annotation<TextBlock[] | null>({ reducer: (_, b) => b, default: () => null }),
   widget: Annotation<WidgetBlock | null>({ reducer: (_, b) => b, default: () => null }),
+  figure: Annotation<FigureBlock | null>({ reducer: (_, b) => b, default: () => null }),
+  figureNote: Annotation<string>({ reducer: (_, b) => b, default: () => "" }),
   widgetError: Annotation<string>({ reducer: (_, b) => b, default: () => "" }),
   textFeedback: Annotation<string>({ reducer: (_, b) => b, default: () => "" }),
   widgetFeedback: Annotation<string>({ reducer: (_, b) => b, default: () => "" }),
@@ -92,8 +97,11 @@ const MAX_RETRIES = 2;
 
 export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointSaver) {
   const { env, ctx, emit } = deps;
-  const step = (s: S, index: number, status: "active" | "done" | "failed", detail?: string) =>
-    emit({ type: "run.step", runId: s.runId, index, label: index === 1 ? readingLabel(s) : MUTATE_STEPS[index], status, detail });
+  const wantsPicture = (s: S) => Boolean(s.figure) || (s.intent?.addImage && !s.intent.addWidget);
+  const step = (s: S, index: number, status: "active" | "done" | "failed", detail?: string) => {
+    const label = index === 1 ? readingLabel(s) : index === 3 && wantsPicture(s) ? "Drawing the illustration" : index === 5 && wantsPicture(s) ? "Checking the picture" : MUTATE_STEPS[index];
+    emit({ type: "run.step", runId: s.runId, index, label, status, detail });
+  };
   const trace = (s: S, label: string, model?: string) => recordRunTrace(env, s.runId, { label, model });
   const selected = (s: S) => s.before.blocks.find((b) => b.id === s.blockId);
 
@@ -113,12 +121,12 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
       reasoningEffort: "low",
       maxTokens: 400,
       messages: [
-        { role: "system", content: "Classify what a student wants changed about a part of their course. Output flags only." },
+        { role: "system", content: "Classify what a student wants changed about a part of their course. Output flags only. addImage is true when they ask to see a picture, illustration, drawing or diagram, or to redraw a selected picture." },
         { role: "user", content: `Selected ${selected(s)?.kind ?? "block"}. Request: "${s.request}"` },
       ],
     });
     // a widget request on a non-text block still needs text left alone
-    if (!intent.rewrite && !intent.addWidget && !intent.moreExamples) intent.rewrite = true;
+    if (!intent.rewrite && !intent.addWidget && !intent.moreExamples && !intent.addImage) intent.rewrite = true;
     await trace(s, `Read the request as: ${describeIntent(intent)}`, MODELS.spark);
     step(s, 0, "done", describeIntent(intent));
     return { intent };
@@ -153,7 +161,8 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
     const plan: string[] = [];
     if (b.kind === "text" && (i.rewrite || i.simplify || i.analogy || i.examFocus || i.moreExamples)) plan.push(`replace ${b.id}`);
     if (i.moreExamples) plan.push(`insertAfter ${b.id} (examples)`);
-    if (i.addWidget) plan.push(`insertAfter ${b.id} (interactive example)`);
+    if (i.addWidget) plan.push(`insertAfter ${b.id} (interactive example, or an illustration when no template fits)`);
+    if (i.addImage && !i.addWidget) plan.push(b.kind === "figure" ? `replace ${b.id} (new picture)` : `insertAfter ${b.id} (illustration)`);
     await trace(s, `Planned the patch: ${plan.join("; ") || "no change"}. Other blocks stay untouched`);
     return {};
   }
@@ -210,9 +219,38 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
     return { textBlocks };
   }
 
+  /** Muse Image draws it; Muse Spark looks at the result before it is shown. */
+  async function drawPicture(s: S): Promise<Partial<S>> {
+    const block = selected(s)!;
+    if (!illustrationsEnabled(env)) {
+      step(s, 3, "failed", "Pictures are switched off");
+      return { widget: null, figure: null, widgetError: "", figureNote: "Pictures are switched off" };
+    }
+    step(s, 3, "active");
+    // a picture request on a picture replaces it; otherwise it is added after the selected block
+    const made = await makeIllustration(env, ctx, {
+      title: s.before.title,
+      blocks: s.before.blocks,
+      request: s.request,
+      cites: block.cites.length ? block.cites : undefined,
+      blockId: block.kind === "figure" ? block.id : undefined,
+    });
+    if (!made.block) {
+      step(s, 3, "failed", made.reason);
+      return { widget: null, figure: null, widgetError: "", figureNote: made.reason };
+    }
+    await trace(s, `Muse Image drew an illustration (${made.attempts === 1 ? "first try" : "second try"}): ${made.block.caption}`, MODELS.image);
+    await trace(s, `Muse Spark looked at the picture: ${made.reason}`, MODELS.spark);
+    step(s, 3, "done");
+    step(s, 5, "done", made.reason);
+    return { widget: null, figure: made.block, widgetError: "", figureNote: made.reason };
+  }
+
   async function buildWidget(s: S): Promise<Partial<S>> {
-    if (!s.intent!.addWidget) return { widget: null };
+    const intent = s.intent!;
+    if (!intent.addWidget && !intent.addImage) return { widget: null, figure: null };
     if (s.attempts > 0 && !s.widgetFeedback) return {}; // retry round for the text only
+    if (s.figure || (intent.addImage && !intent.addWidget)) return s.figure ? {} : drawPicture(s);
     step(s, 3, "active");
     const block = selected(s)!;
     const material = s.chunks.map((c) => `<chunk id="${c.id}">\n${c.text}\n</chunk>`).join("\n");
@@ -227,7 +265,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
         {
           role: "system",
           content: [
-            "You design one small interactive example for a course paragraph. Pick a template and fill its params. Strongly prefer a template: vector2d for anything about a 2x2 matrix acting on vectors (eigenvectors, transformations), plot for functions and polynomials (e.g. a characteristic polynomial with its roots), stepper for worked procedures. Use 'custom' only if none of these can show it.",
+            "You design one small interactive example for a course paragraph. Pick a template and fill its params. Use a template only when it truly fits: vector2d for a 2x2 matrix acting on vectors (eigenvectors, transformations), plot for a function you can drag along (e.g. a polynomial with its roots), stepper for worked procedures. For anything else (physical systems, architecture, processes, biology, analogies, anything you would draw on a whiteboard) choose 'illustration': a picture drawn by an image model, and leave paramsJson as '{}' and claims empty. Never force an idea into a template that does not fit it. Use 'custom' only for an interaction no template can express.",
             `Templates:\n${TEMPLATE_DOCS}`,
             "Claims are mathjs boolean expressions over the params that state the facts the widget teaches; they are recomputed in code. For vector2d, A is available as a matrix (e.g. 'A * [1, 1] == 3 * [1, 1]', 'det(A) == 3'). For plot, f(x) is the plotted function with slider values (e.g. 'f(2) == 0'). Give 2–4 claims.",
             "Numbers must come from the chunks when they give an example; otherwise choose small integers.",
@@ -246,6 +284,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
         },
       ],
     });
+    if (choice.template === "illustration") return drawPicture({ ...s, intent: { ...intent, addImage: true, addWidget: false } } as S);
     try {
       const spec = await toWidgetSpec(ctx, choice, s.request, blockText(block));
       const byId = new Map(s.chunks.map((c) => [c.id, c]));
@@ -343,8 +382,16 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
       ops.push({ op: "insertAfter", blockId: last, block: s.widget });
       summary.push("Added 1 interactive example");
       summary.push(s.verification?.render?.unavailable ? "Example's math checked in code" : "Example ran without errors");
-    } else if (s.intent?.addWidget) {
-      summary.push("Could not build an example that passed every check, so none was added");
+    } else if (s.intent?.addWidget && !s.figure) {
+      summary.push(s.figureNote ? "Could not draw a picture that passed review, so none was added" : "Could not build an example that passed every check, so none was added");
+    }
+    if (s.figure) {
+      const redraw = block.kind === "figure";
+      ops.push(redraw ? { op: "replace", blockId: block.id, block: s.figure } : { op: "insertAfter", blockId: last, block: s.figure });
+      summary.push(redraw ? "Redrew the picture with Muse Image" : "Added 1 illustration drawn by Muse Image (labelled generated)");
+      if (s.figureNote) summary.push(`Muse Spark checked the picture: ${s.figureNote}`);
+    } else if (s.intent?.addImage && !s.intent.addWidget) {
+      summary.push("Could not draw a picture that passed review, so none was added");
     }
     const after: Section = { ...s.before, blocks: applyPatch(s.before.blocks, ops) };
     emit({ type: "patch", runId: s.runId, sectionId: s.sectionId, ops });
@@ -419,6 +466,7 @@ async function toWidgetSpec(ctx: AiCtx, choice: z.infer<typeof WidgetChoiceSchem
   if (choice.template === "vector2d") return { template: "vector2d", title: choice.title, params: Vector2dParams.parse(params), claims: choice.claims };
   if (choice.template === "plot") return { template: "plot", title: choice.title, params: PlotParams.parse(params), claims: choice.claims };
   if (choice.template === "stepper") return { template: "stepper", title: choice.title, params: StepperParams.parse(params), claims: [] };
+  if (choice.template === "illustration") throw new Error("illustrations are drawn, not specified");
   // custom: Muse Code has no API, so Muse Spark writes the sandboxed HTML
   let html = typeof params.html === "string" ? params.html : "";
   if (!html) {
@@ -443,7 +491,7 @@ function blockText(b: Block): string {
 }
 
 function describeIntent(i: Intent): string {
-  const parts = [i.simplify && "simplify", i.addWidget && "add an interactive example", i.moreExamples && "more examples", i.examFocus && "exam focus", i.analogy && "analogy", i.notes].filter(Boolean);
+  const parts = [i.simplify && "simplify", i.addWidget && "add an interactive example", i.moreExamples && "more examples", i.examFocus && "exam focus", i.analogy && "analogy", i.addImage && "add a picture", i.notes].filter(Boolean);
   return parts.join(", ") || "rewrite";
 }
 

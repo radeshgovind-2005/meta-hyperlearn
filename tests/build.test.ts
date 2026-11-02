@@ -7,6 +7,7 @@ import { BuildCourseWorkflow, type BuildParams } from "../src/server/workflows/b
 import { BuildSectionWorkflow, type SectionBuildParams } from "../src/server/workflows/buildSection";
 import { buildJobs, commitBuild, completedJobs, retryBuild } from "../src/server/course/buildJobs";
 import { verifyBlocks, writeSection } from "../src/server/course/build";
+import { getBlocks } from "../src/server/lib/blocks";
 import { courses } from "../src/server/routes/courses";
 import init from "../migrations/0001_init.sql?raw";
 import jobsMigration from "../migrations/0002_section_builds.sql?raw";
@@ -53,7 +54,7 @@ beforeEach(async () => {
   await bindings.DB.prepare("INSERT INTO chunks (id, source_id, ord, text, page) VALUES ('chunk', 'source', 1, 'Parallel tasks run concurrently.', 1)").run();
   calls = 0; childCalls = []; childParams = [];
   appEnv = {
-    ...bindings, META_API_KEY: "test", META_BASE_URL: "https://model.invalid/v1", DEMO_SPEND_CAP_USD: "40",
+    ...bindings, ILLUSTRATIONS: "off", META_API_KEY: "test", META_BASE_URL: "https://model.invalid/v1", DEMO_SPEND_CAP_USD: "40",
     USER_DO: { idFromName: () => "id", get: () => ({ getSpend: async () => 0, addSpend: async () => {}, addQuota: async () => ({}) }) },
     BUILD_SECTION: { create: async ({ params: p }: { params: SectionBuildParams }) => {
       childParams.push(p);
@@ -158,6 +159,42 @@ describe("free-tier course builds", () => {
     expect(await bindings.DB.prepare("SELECT COUNT(*) AS n FROM course_sources").first("n")).toBe(1);
     const app = new Hono<AppEnv>().use("*", async (c, next) => { c.set("userId", "stranger"); await next(); }).route("/", courses);
     expect((await app.request("/course/retry", { method: "POST" }, appEnv)).status).toBe(403);
+  });
+
+  describe("picture at the top of each page", () => {
+    const route = (images: () => Response) => vi.fn(async (url: string, init: RequestInit) => {
+      if (url.endsWith("/images/generations")) return images();
+      const type = JSON.parse(init.body as string).response_format.json_schema.name;
+      if (type === "outline") return jsonResponse({ title: "Parallel Computing", description: "", chapters: [{ title: "Tasks", sections: [{ title: "Tasks", concept: "tasks", pages: [{ sourceId: "source", page: 1 }] }] }] });
+      if (type === "section") return jsonResponse({ blocks: [
+        { kind: "text", md: "Parallel tasks run concurrently.", answer: "", chunkIds: ["chunk"], verbatim: true },
+        { kind: "exercise", md: "Explain parallel tasks.", answer: "They run concurrently.", chunkIds: ["chunk"], verbatim: false },
+      ] });
+      if (type === "illustration_plan") return jsonResponse({ subject: "three workers building one wall", caption: "Workers sharing one job" });
+      if (type === "illustration_judgement") return jsonResponse({ ok: true, reason: "clear" });
+      return jsonResponse({ verdicts: [{ i: 1, supported: true, reason: "supported" }] });
+    });
+    const firstBlocks = async () => {
+      const job = await bindings.DB.prepare("SELECT block_hashes FROM section_build_jobs").first<{ block_hashes: string }>();
+      return getBlocks(appEnv, JSON.parse(job!.block_hashes));
+    };
+
+    it("puts a generated figure first in every new section", async () => {
+      appEnv.ILLUSTRATIONS = undefined;
+      vi.stubGlobal("fetch", route(() => Response.json({ data: [{ b64_json: "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==" }], output_format: "webp" })));
+      await expect(parent()).resolves.toEqual({ version: 1 });
+      const blocks = await firstBlocks();
+      expect(blocks.map((b) => b.kind)).toEqual(["figure", "text", "exercise"]);
+      expect(blocks[0]).toMatchObject({ generated: true, caption: "Workers sharing one job" });
+      expect(await bindings.FILES.head((blocks[0] as { r2Key: string }).r2Key)).not.toBeNull();
+    }, 30000);
+
+    it("still publishes the page when the picture cannot be drawn", async () => {
+      appEnv.ILLUSTRATIONS = undefined;
+      vi.stubGlobal("fetch", route(() => new Response("overloaded", { status: 503 })));
+      await expect(parent()).resolves.toEqual({ version: 1 });
+      expect((await firstBlocks()).map((b) => b.kind)).toEqual(["text", "exercise"]);
+    }, 30000);
   });
 
   it("rejects oversized section drafts instead of expanding the request budget", async () => {

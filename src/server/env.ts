@@ -29,6 +29,8 @@ export interface Env {
   WIDGETS_ORIGIN: string;
   APP_ORIGIN: string;
   SEED_TOKEN?: string;
+  /** "off" stops Muse Image pictures from being drawn (spend kill switch). */
+  ILLUSTRATIONS?: string;
   QUOTA_STORAGE_GB?: string;
   QUOTA_R2_CLASS_A?: string;
   QUOTA_R2_CLASS_B?: string;

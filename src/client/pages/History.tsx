@@ -15,6 +15,7 @@ const KIND: Record<string, string> = {
   undo: "Restored",
   pull: "Took updates",
   edit: "Edited by hand",
+  illustrate: "A picture was added",
 };
 
 export function HistoryPage() {

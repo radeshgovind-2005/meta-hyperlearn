@@ -19,6 +19,10 @@ Record the 3-minute video, post on X, and submit before Wed Nov 4, 9:00 PM ET. E
 - Verified: 54 Workers tests, typecheck, lint; production via the seed API: 4 rounds covered all 25 types, all 23 code-graded answer keys self-check, session opens in 0.3–0.9 s, first question 4–9 s, code grading 0.2 s, Spark grading ~5 s, Listen script 7.6 s first / 0.4 s cached. Widgets checked in the browser on `/embed/widget` (goal turns green, ghost curve, drag).
 - Not exercised: the signed-in Practice page, reader Listen bar and Ask by voice in a browser (needs the owner's sign-in).
 
+## Pictures (2026-11-02)
+- Muse Image (`POST /images/generations`, webp, 16:9-ish, ~10 s, $0.01) draws a hero figure (`generated: true`, first block) for every section: in `BuildSectionWorkflow` (best effort step `illustrate`), lazily via `POST /api/courses/:id/sections/:sid/illustrate` for older pages, and from the mutate graph (`addImage` intent, or widget template `illustration`; a selected picture is replaced in place). Kill switch: `ILLUSTRATIONS=off`.
+- Tests: 76 Workers tests (new `tests/image.test.ts`, hero cases in `tests/build.test.ts`).
+
 ## Reader fixes (2026-11-02)
 - Removed the "Show as" toggle and its `/view` route.
 - Command bar is pinned to the bottom of the viewport on every screen (sticky dock).

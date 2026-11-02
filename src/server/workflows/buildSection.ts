@@ -5,6 +5,8 @@ import { getAiCtx } from "../ai/meta";
 import { gatherSectionChunks, loadSourcesFor, verifyBlocks, writeSection } from "../course/build";
 import { activeBuild } from "../course/buildJobs";
 import { putBlocks } from "../lib/blocks";
+import { illustrationsEnabled, makeIllustration } from "../course/illustrate";
+import { withHero, type FigureBlock } from "../../shared/hero";
 import type { ExamStyle } from "../ingest/pipeline";
 import type { BuildParams } from "./buildCourse";
 
@@ -45,9 +47,22 @@ export class BuildSectionWorkflow extends WorkflowEntrypoint<Env, SectionBuildPa
         result = JSON.parse(await step.do("recheck", MODEL_STEP, async () => verify(repairedJson))) as typeof result;
       }
       if (!result.blocks.some((b) => b.kind === "text")) throw new Error("No teaching text could be verified against the sources. Please retry.");
+      // best effort: a page without a picture is better than a failed build
+      const heroJson = illustrationsEnabled(env)
+        ? await step.do("illustrate", MODEL_STEP, async () => {
+            try {
+              const made = await makeIllustration(env, await getAiCtx(env, userId), { title: section.title, blocks: result.blocks });
+              return made.block ? JSON.stringify(made.block) : "";
+            } catch (err) {
+              console.error("illustration failed", (err as Error).message);
+              return "";
+            }
+          })
+        : "";
       await step.do("save", async () => {
         if (!(await activeBuild(env, courseId, runId))) return;
-        const hashes = await putBlocks(env, result.blocks);
+        const blocks = heroJson ? withHero(result.blocks, JSON.parse(heroJson) as FigureBlock) : result.blocks;
+        const hashes = await putBlocks(env, blocks);
         await env.DB.prepare("UPDATE section_build_jobs SET status = 'done', block_hashes = ?, checked = ?, supported = ?, verifier = ?, error = NULL, updated_at = ? WHERE attempt_id = ? AND section_id = ? AND status = 'running'").bind(JSON.stringify(hashes), result.checked, result.supported, result.verifier, Date.now(), runId, sectionId).run();
         await flushQuota(env);
       });

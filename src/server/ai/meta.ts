@@ -37,7 +37,7 @@ export async function getAiCtx(env: Env, userId: string): Promise<AiCtx> {
   return { env, userId, apiKey: env.META_API_KEY, mode: "demo" };
 }
 
-async function assertBudget(ctx: AiCtx) {
+export async function assertBudget(ctx: AiCtx) {
   const { env } = ctx;
   if (ctx.mode === "demo") {
     const spent = await env.USER_DO.get(env.USER_DO.idFromName("demo-global")).getSpend("all");

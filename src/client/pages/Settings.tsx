@@ -11,7 +11,7 @@ const MODEL_JOBS: Record<string, string> = {
   "muse-wonder-1.0": "Muse Wonder · re-planning your path",
   "muse-voice-transcribe-1.0": "Muse Voice Transcribe · recordings and voice input",
   "sam-3.1": "SAM 3.1 · figures from slides",
-  "muse-image-1.0": "Muse Image · analogy pictures",
+  "muse-image-1.0": "Muse Image · page pictures and illustrations",
 };
 
 function SettingsTabs() {

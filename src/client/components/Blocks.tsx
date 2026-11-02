@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Block, Cite, WidgetSpec } from "@shared/types";
 import { PlotParams, StepperParams, Vector2dParams } from "@shared/widgets";
 import { Md } from "./Md";
@@ -80,14 +81,42 @@ export function ExerciseCard({ block, styleName }: { block: Extract<Block, { kin
   );
 }
 
-export function FigureView({ block, url }: { block: Extract<Block, { kind: "figure" }>; url?: string }) {
+type FigureProps = {
+  block: Extract<Block, { kind: "figure" }>;
+  url?: string;
+  selected?: boolean;
+  changed?: boolean;
+  onSelect?: () => void;
+  menu?: ReactNode;
+};
+
+/** A figure from the sources, or a picture Muse Image drew for the page (always labelled generated). */
+export function FigureView({ block, url, selected, changed, onSelect, menu }: FigureProps) {
   return (
-    <figure style={{ margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-      {url && <img src={url} alt={block.caption} style={{ maxWidth: "100%", border: "1px solid var(--border)", borderRadius: 8 }} />}
+    <figure className={`figure${block.generated ? " generated" : ""}${selected ? " selected" : ""}${changed ? " changed" : ""}`} onClick={onSelect}>
+      {url ? <img src={url} alt={block.caption} /> : block.generated ? <div className="figure-skeleton" role="img" aria-label="Loading picture" /> : null}
       <figcaption className="small muted">
         {block.caption}
-        {block.generated ? " · generated" : ""}
+        {block.generated ? " · drawn by Muse Image" : ""}
       </figcaption>
+      {menu}
+    </figure>
+  );
+}
+
+export function HeroPlaceholder({ failed, message, onRetry }: { failed?: boolean; message?: string; onRetry?: () => void }) {
+  if (failed) {
+    return (
+      <p className="small muted" style={{ margin: 0 }}>
+        {message ? `No picture for this page yet: ${message}` : "No picture for this page yet."}{" "}
+        <button type="button" className="link-btn" onClick={onRetry}>Try again</button>
+      </p>
+    );
+  }
+  return (
+    <figure className="figure generated" aria-busy="true">
+      <div className="figure-skeleton" />
+      <figcaption className="small muted">Drawing a picture for this page with Muse Image…</figcaption>
     </figure>
   );
 }

@@ -23,7 +23,7 @@ export async function runAction(r: Extract<TutorResult, { kind: "action" }>, ctx
     case "mutateBlock":
     case "makeWidget": {
       const req = String(a.request ?? "");
-      const full = r.tool === "makeWidget" && !/interactive|example|widget/i.test(req) ? `${req}. Give me an interactive example.` : req;
+      const full = r.tool === "makeWidget" && !/interactive|example|widget|picture|image|illustrat|draw|diagram|sketch/i.test(req) ? `${req}. Give me an interactive example.` : req;
       if (ctx.onMutate) {
         ctx.onMutate(full);
         return null;

@@ -54,6 +54,7 @@ export function Palette({ prefill, onClose }: { prefill?: string; onClose: () =>
           onClose();
         }),
         act("Make an interactive example", () => { m("Give me an interactive example I can play with."); onClose(); }),
+        act("Draw a picture of this idea", () => { m("Draw an illustration of this idea."); onClose(); }),
         act("Make this section simpler", () => { m("This is too complex. Simplify it."); onClose(); }),
         act("Explain it with an analogy", () => { m("Explain it with an analogy."); onClose(); }),
       );

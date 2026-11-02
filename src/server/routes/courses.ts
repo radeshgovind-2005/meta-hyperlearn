@@ -13,6 +13,8 @@ import { getAiCtx } from "../ai/meta";
 import { retryBuild } from "../course/buildJobs";
 import { assertQuota } from "../lib/quota";
 import { chunkToCite, searchChunks, type ChunkRow } from "../lib/chunks";
+import { illustrationsEnabled, makeIllustration } from "../course/illustrate";
+import { canIllustrate, heroOf, withHero } from "../../shared/hero";
 
 export async function sourcesPayload(env: Env, blocks: Block[], courseId: string) {
   const ids = new Set<string>();
@@ -145,6 +147,34 @@ export const courses = new Hono<AppEnv>()
     if (!access) return c.json({ error: "Not found" }, 404);
     await c.env.DB.prepare("INSERT OR IGNORE INTO reads (user_id, section_id, course_id, read_at) VALUES (?, ?, ?, ?)").bind(userId, c.req.param("sid"), access.course.id, Date.now()).run();
     return c.json({ ok: true });
+  })
+  .post("/:id/sections/:sid/illustrate", async (c) => {
+    // the picture at the top of a page; made once, for pages built before pictures existed
+    const userId = c.get("userId");
+    const access = await courseAccess(c.env, c.req.param("id"), userId);
+    if (!access) return c.json({ error: "Not found" }, 404);
+    const sectionId = c.req.param("sid");
+    try {
+      if (!illustrationsEnabled(c.env)) return c.json({ error: "Pictures are switched off." }, 503);
+      const ai = await getAiCtx(c.env, userId);
+      await assertQuota(c.env, ["storage", "classA"]);
+      const section = await loadSection(c.env, access.course.id, sectionId, { userId });
+      if (heroOf(section.blocks) || !canIllustrate(section.blocks)) return c.json({ added: false });
+      const made = await makeIllustration(c.env, ai, { title: section.title, blocks: section.blocks });
+      if (!made.block) return c.json({ error: `Could not draw a picture that passed review (${made.reason}).` }, 422);
+      await commitSection(c.env, {
+        courseId: access.course.id,
+        sectionId,
+        title: section.title,
+        blocks: withHero(section.blocks, made.block),
+        userId,
+        kind: "illustrate",
+        summary: `${section.title}: added a picture drawn by Muse Image`,
+      });
+      return c.json({ added: true });
+    } catch (err) {
+      return errorResponse(c, err);
+    }
   })
   .post("/:id/sections/:sid/mutate", async (c) => {
     const userId = c.get("userId");

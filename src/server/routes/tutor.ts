@@ -23,7 +23,7 @@ const TOOLS: ToolDef[] = [
     },
   },
   { type: "function", function: { name: "mutateBlock", description: "Change the current section: simplify, rewrite, add examples, analogy, exam focus.", parameters: { type: "object", properties: { request: { type: "string" } }, required: ["request"] } } },
-  { type: "function", function: { name: "makeWidget", description: "Add an interactive example to the current section.", parameters: { type: "object", properties: { request: { type: "string" } }, required: ["request"] } } },
+  { type: "function", function: { name: "makeWidget", description: "Add an interactive example, or a picture drawn by an image model (illustration, diagram), to the current section.", parameters: { type: "object", properties: { request: { type: "string" } }, required: ["request"] } } },
   { type: "function", function: { name: "addExercises", description: "Start a practice round of exam-style questions.", parameters: { type: "object", properties: { count: { type: "number" }, chapter: { type: "string" } }, required: [] } } },
   { type: "function", function: { name: "share", description: "Open the share dialog for the current course.", parameters: { type: "object", properties: {}, required: [] } } },
   { type: "function", function: { name: "fork", description: "Make the student's own copy of the current course.", parameters: { type: "object", properties: {}, required: [] } } },
