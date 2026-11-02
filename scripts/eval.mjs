@@ -73,13 +73,16 @@ async function judge(sentence, evidence) {
     headers: { Authorization: `Bearer ${vars.META_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "muse-spark-1.3",
-      max_completion_tokens: 300,
+      max_completion_tokens: 4000,
+      reasoning_effort: "low",
       response_format: { type: "json_schema", json_schema: { name: "v", schema: { type: "object", properties: { supported: { type: "boolean" } }, required: ["supported"] } } },
       messages: [{ role: "user", content: `Evidence:\n${evidence.join("\n---\n")}\n\nIs this sentence supported by the evidence (paraphrase, simplification or direct consequence counts; added facts do not)? Sentence: "${sentence}". Answer JSON.` }],
     }),
   });
   const j = await res.json();
-  return JSON.parse(j.choices[0].message.content).supported === true;
+  const content = j.choices?.[0]?.message?.content;
+  if (!content) throw new Error(`judge returned no content: ${JSON.stringify(j).slice(0, 200)}`);
+  return JSON.parse(content).supported === true;
 }
 
 const target = async (inputs) => {
