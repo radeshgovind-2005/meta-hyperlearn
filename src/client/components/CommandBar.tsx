@@ -7,7 +7,7 @@ import { startVoice, type VoiceSession } from "../lib/voice";
 import { ArrowUp, Close, Mic } from "./Icons";
 import { Md } from "./Md";
 
-/** The inline "Ask, or tell HyperLearn what to do" bar at the bottom of every screen. */
+/** The "Ask, or tell HyperLearn what to do" bar, pinned to the bottom of every screen. */
 export function CommandBar({ placeholder }: { placeholder?: string }) {
   const { pageContext, toast } = useApp();
   const navigate = useNavigate();
@@ -65,7 +65,7 @@ export function CommandBar({ placeholder }: { placeholder?: string }) {
     (pageContext.sectionTitle ? `Ask about ${pageContext.sectionTitle}, or tell HyperLearn what to do` : "Ask, or tell HyperLearn what to do");
 
   return (
-    <div style={{ marginTop: "auto", width: "100%", maxWidth: pageContext.sectionId ? 680 : undefined, alignSelf: "center", display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="cmdbar-dock" style={{ maxWidth: pageContext.sectionId ? 680 : undefined }}>
       {answer && (
         <div className="answer-card" aria-live="polite">
           <div className="row" style={{ justifyContent: "space-between" }}>

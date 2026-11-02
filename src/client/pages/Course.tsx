@@ -22,22 +22,17 @@ export type CourseResp = {
 };
 type SectionResp = { section: Section & { overlay: boolean }; sources: Record<string, SourceInfo>; figures: Record<string, string>; role: string };
 
-const MODES = [
-  { key: "original", label: "Original" },
-  { key: "simpler", label: "Simpler" },
-  { key: "analogy", label: "Analogy" },
-  { key: "exam", label: "Exam style" },
-] as const;
-type Mode = (typeof MODES)[number]["key"];
-
 type Step = { label: string; status: "pending" | "active" | "done" | "failed"; detail?: string };
+// a change is saved as soon as it passes verification; Undo puts `before` back
+type Change = { blockId: string; request: string; runId: string; summary: string[]; before: Section; after: Section; changedIds: string[] };
 type MutState =
   | { stage: "idle" }
   | { stage: "ask"; blockId: string; request: string }
   | { stage: "working"; blockId: string; request: string; runId: string; steps: Step[] }
-  | { stage: "review"; blockId: string; request: string; runId: string; steps: Step[]; summary: string[]; after: Section; before: Section; showBefore: boolean; changedIds: string[] }
-  | { stage: "saving"; blockId: string; request: string; runId: string; after: Section; summary: string[]; changedIds: string[] }
-  | { stage: "kept"; message: string; summary: string[]; runId: string; changedIds: string[] };
+  | ({ stage: "saving" } & Change)
+  | ({ stage: "kept"; message: string; showBefore: boolean } & Change)
+  | ({ stage: "undoing" } & Change);
+type RunDone = Extract<RunEvent, { type: "run.done" }>;
 
 const SUGGESTIONS = ["Simpler", "Interactive example", "More examples", "Exam focus"];
 const SUGGESTION_TEXT: Record<string, string> = {
@@ -69,9 +64,6 @@ export function CoursePage() {
   const config = useConfig();
   const outline = useApi<CourseResp>(`/api/courses/${courseId}`);
   const sec = useApi<SectionResp>(`/api/courses/${courseId}/sections/${sectionId}`);
-  const [mode, setMode] = useState<Mode>("original");
-  const [view, setView] = useState<Record<string, string> | null>(null);
-  const [viewBusy, setViewBusy] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [activeCite, setActiveCite] = useState(0);
   const [mut, setMut] = useState<MutState>({ stage: "idle" });
@@ -86,11 +78,11 @@ export function CoursePage() {
   const section = sec.data?.section;
   const sources = sec.data?.sources ?? {};
   const exam = outline.data?.sources.find((s) => s.kind === "exam");
+  const reloadSection = sec.reload;
+  const reloadOutline = outline.reload;
 
   // reset per section
   useEffect(() => {
-    setMode("original");
-    setView(null);
     setSelected(null);
     setMut({ stage: "idle" });
     window.speechSynthesis?.cancel();
@@ -134,65 +126,61 @@ export function CoursePage() {
     async (blockId: string, request: string) => {
       if (!section) return;
       setSelected(blockId);
-      const steps: Step[] = [];
-      setMut({ stage: "working", blockId, request, runId: "", steps });
+      setMut({ stage: "working", blockId, request, runId: "", steps: [] });
+      const result: { done?: RunDone } = {};
       try {
         await streamEvents<RunEvent>(`/api/courses/${courseId}/sections/${sectionId}/mutate`, { blockId, request }, (ev) => {
+          if (ev.type === "run.done") result.done = ev;
           setMut((m) => {
-            if (m.stage !== "working" && m.stage !== "review") return m;
-            if (ev.type === "run.start") return { ...m, runId: ev.runId, steps: ev.steps.map((label) => ({ label, status: "pending" })) } as MutState;
-            if (ev.type === "run.step" && m.stage === "working") {
+            if (m.stage !== "working") return m;
+            if (ev.type === "run.start") return { ...m, runId: ev.runId, steps: ev.steps.map((label) => ({ label, status: "pending" })) };
+            if (ev.type === "run.step") {
               const s = [...m.steps];
               s[ev.index] = { label: ev.label, status: ev.status, detail: ev.detail };
               for (let i = 0; i < ev.index; i++) if (s[i]?.status === "pending" || s[i]?.status === "active") s[i] = { ...s[i], status: "done" };
               return { ...m, steps: s };
             }
-            if (ev.type === "run.waiting" && m.stage === "working") {
+            if (ev.type === "run.waiting") {
               const changedIds = ev.section.blocks.filter((b) => !ev.before.blocks.some((x) => JSON.stringify(x) === JSON.stringify(b))).map((b) => b.id);
-              return { ...m, stage: "review", summary: ev.summary, after: ev.section, before: ev.before, showBefore: false, changedIds, steps: m.steps.map((s) => (s.status === "pending" || s.status === "active" ? { ...s, status: "done" } : s)) };
-            }
-            if (ev.type === "run.done" && ev.status === "failed") {
-              toast(ev.message ?? "That change failed");
-              return { stage: "idle" };
-            }
-            if (ev.type === "run.done" && ev.status === "undone") {
-              return { stage: "idle" };
+              return { stage: "saving", blockId, request, runId: m.runId, summary: ev.summary, after: ev.section, before: ev.before, changedIds };
             }
             return m;
           });
         });
-        // stream ended: if no review arrived, nothing changed
-        setMut((m) => (m.stage === "working" ? (toast("Nothing changed. Try asking another way."), { stage: "idle" }) : m));
+        const done = result.done;
+        if (done?.status !== "kept") {
+          toast(done?.status === "failed" ? done.message ?? "That change failed" : "Nothing changed. Try asking another way.");
+          setMut({ stage: "idle" });
+          return;
+        }
+        await reloadSection();
+        void reloadOutline();
+        void reloadCourses();
+        setMut((m) => (m.stage === "saving" ? { ...m, stage: "kept", message: done.message || "Saved.", showBefore: false } : m));
       } catch (e) {
         const err = e as ApiError;
         toast(err.code === "budget" ? err.message : `Could not change it: ${err.message}`);
         setMut({ stage: "idle" });
       }
     },
-    [section, courseId, sectionId, toast],
+    [section, courseId, sectionId, toast, reloadSection, reloadOutline, reloadCourses],
   );
 
-  const decide = async (decision: "keep" | "undo", retry = false) => {
+  /** Puts the section back the way it was before the last change; optionally asks again differently. */
+  const undoChange = async (retry = false) => {
     const m = mutRef.current;
-    if (m.stage !== "review") return;
-    if (decision === "keep") setMut({ stage: "saving", blockId: m.blockId, request: m.request, runId: m.runId, after: m.after, summary: m.summary, changedIds: m.changedIds });
-    else setMut({ stage: "idle" });
+    if (m.stage !== "kept") return;
+    setMut({ ...m, stage: "undoing" });
     try {
-      let message = "";
-      await streamEvents<RunEvent>(`/api/runs/${m.runId}/resume`, { decision }, (ev) => {
-        if (ev.type === "run.done") message = ev.message ?? "";
-      });
-      if (decision === "keep") {
-        setMut({ stage: "kept", message: message || "Saved.", summary: m.summary, runId: m.runId, changedIds: m.changedIds });
-        await sec.reload();
-        void outline.reload();
-        void reloadCourses();
-      } else if (retry) {
-        void startMutation(m.blockId, `${m.request} (Try a different approach from last time.)`);
-      }
+      await api(`/api/courses/${courseId}/sections/${sectionId}/edit`, { body: { title: m.before.title, blocks: m.before.blocks, undo: true } });
+      await sec.reload();
+      void outline.reload();
+      setMut({ stage: "idle" });
+      if (retry) void startMutation(m.blockId, `${m.request} (Try a different approach from last time.)`);
+      else toast("Change undone.");
     } catch (e) {
       toast((e as Error).message);
-      setMut({ stage: "idle" });
+      setMut(m);
     }
   };
 
@@ -203,28 +191,15 @@ export function CoursePage() {
       sectionId,
       sectionTitle: current ? `${numbers.get(current.id) ?? ""} ${current.title}`.trim() : undefined,
       onMutate: (request: string) => {
-        const target = selected ?? section?.blocks.find((b) => b.kind === "text")?.id;
+        const stage = mutRef.current.stage;
+        if (stage === "working" || stage === "saving" || stage === "undoing") return toast("Still working on the last change. Ask again in a moment.");
+        const target = (selected && section?.blocks.some((b) => b.id === selected) ? selected : undefined) ?? section?.blocks.find((b) => b.kind === "text")?.id;
         if (target) void startMutation(target, request);
       },
       onShare: () => setShare(true),
     },
     [courseId, sectionId, outline.data, section, selected, startMutation],
   );
-
-  const pickMode = async (m: Mode) => {
-    setMode(m);
-    if (m === "original") return setView(null);
-    setViewBusy(true);
-    try {
-      const r = await api<{ blocks: Record<string, string> }>(`/api/courses/${courseId}/sections/${sectionId}/view`, { body: { mode: m } });
-      setView(r.blocks);
-    } catch (e) {
-      toast((e as Error).message);
-      setMode("original");
-    } finally {
-      setViewBusy(false);
-    }
-  };
 
   const listen = () => {
     const synth = window.speechSynthesis;
@@ -238,7 +213,7 @@ export function CoursePage() {
     const speakFrom = (i: number) => {
       if (i >= texts.length) return setListening(null);
       const b = texts[i];
-      const u = new SpeechSynthesisUtterance((view?.[b.id] ?? b.md).replace(/[*_`$]/g, ""));
+      const u = new SpeechSynthesisUtterance(b.md.replace(/[*_`$]/g, ""));
       u.rate = 1;
       u.onstart = () => setListening(b.id);
       u.onend = () => speakFrom(i + 1);
@@ -258,27 +233,27 @@ export function CoursePage() {
     );
   }
 
-  const shownSection: Section | undefined =
-    mut.stage === "review" ? (mut.showBefore ? mut.before : mut.after) : mut.stage === "saving" ? mut.after : section;
+  const hasChange = mut.stage === "saving" || mut.stage === "kept" || mut.stage === "undoing";
+  const shownSection: Section | undefined = mut.stage === "saving" ? mut.after : mut.stage === "kept" && mut.showBefore ? mut.before : section;
   const blocks = shownSection?.blocks ?? [];
   const selBlock = blocks.find((b) => b.id === selected) ?? section?.blocks.find((b) => b.id === selected);
   const paneCites: Cite[] = selBlock?.cites ?? blocks.find((b) => b.kind === "text")?.cites ?? [];
-  // Keep / Undo sit right under the change (the last changed block), as in the design
-  const changedIds = mut.stage === "review" || mut.stage === "saving" || mut.stage === "kept" ? mut.changedIds : [];
-  const decisionAnchor = [...blocks].reverse().find((b) => changedIds.includes(b.id))?.id ?? (mut.stage === "review" ? mut.blockId : undefined);
+  // Undo sits right under the change (the last changed block)
+  const changedIds = hasChange ? mut.changedIds : [];
+  const decisionAnchor = [...blocks].reverse().find((b) => changedIds.includes(b.id))?.id ?? (hasChange ? mut.blockId : undefined);
   const Decision = () =>
-    mut.stage === "review" ? (
-      <div className="row" style={{ gap: 12 }}>
-        <button type="button" className="btn btn-dark" onClick={() => void decide("keep")}>Keep</button>
-        <button type="button" className="btn" onClick={() => void decide("undo")}>Undo</button>
-        <button type="button" className="link-btn" onClick={() => void decide("undo", true)}>Try another way</button>
-      </div>
-    ) : mut.stage === "saving" ? (
+    mut.stage === "saving" ? (
       <p className="small muted">Saving…</p>
+    ) : mut.stage === "undoing" ? (
+      <p className="small muted">Undoing…</p>
     ) : mut.stage === "kept" ? (
-      <p style={{ fontSize: 14, color: "var(--success)" }}>{mut.message}</p>
+      <div className="row" style={{ gap: 12 }}>
+        <span style={{ fontSize: 14, color: "var(--success)" }}>{mut.message}</span>
+        <button type="button" className="btn" onClick={() => void undoChange()}>Undo</button>
+        <button type="button" className="link-btn" onClick={() => void undoChange(true)}>Try another way</button>
+      </div>
     ) : null;
-  const changed = (id: string) => (mut.stage === "review" || mut.stage === "saving" || mut.stage === "kept") && mut.changedIds.includes(id);
+  const changed = (id: string) => !(mut.stage === "kept" && mut.showBefore) && changedIds.includes(id);
   const chapterOf = current?.chapter;
   const chapterSections = (outline.data?.sections ?? []).filter((s) => s.chapter === chapterOf);
 
@@ -348,26 +323,12 @@ export function CoursePage() {
           </div>
           <h1>{shownSection?.title ?? current?.title ?? ""}</h1>
 
-          <div className="row" style={{ gap: 12 }}>
-            <span className="small muted">Show as</span>
-            <div role="group" aria-label="Show as" style={{ display: "inline-flex", border: "1px solid var(--input)", borderRadius: 8, padding: 2, gap: 2 }}>
-              {MODES.map((m) => (
-                <button key={m.key} type="button" aria-pressed={mode === m.key} onClick={() => void pickMode(m.key)} disabled={viewBusy || mut.stage !== "idle"} style={{ height: 32, padding: "0 12px", borderRadius: 6, border: "none", font: "500 13px var(--ui)", cursor: "pointer", background: mode === m.key ? "var(--ink)" : "transparent", color: mode === m.key ? "#fff" : "var(--body)" }}>
-                  {m.label}
-                </button>
-              ))}
-            </div>
-            {viewBusy && <span className="spinner" />}
-          </div>
-
-          {(mut.stage === "review" || mut.stage === "kept") && (
+          {mut.stage === "kept" && (
             <div className="row small muted" style={{ gap: 10 }}>
-              <span>{mut.stage === "review" && mut.showBefore ? "Before the change" : "Changed just now"}</span>
-              {mut.stage === "review" && (
-                <button type="button" className="link-btn" style={{ fontSize: 13 }} onClick={() => setMut({ ...mut, showBefore: !mut.showBefore })}>
-                  {mut.showBefore ? "Show new version" : "Show before"}
-                </button>
-              )}
+              <span>{mut.showBefore ? "Before the change" : "Changed just now"}</span>
+              <button type="button" className="link-btn" style={{ fontSize: 13 }} onClick={() => setMut({ ...mut, showBefore: !mut.showBefore })}>
+                {mut.showBefore ? "Show new version" : "Show before"}
+              </button>
             </div>
           )}
 
@@ -391,7 +352,7 @@ export function CoursePage() {
                     onKeyDown={(e) => e.key === "Enter" && (setSelected(b.id), setActiveCite(0))}
                     aria-label={isSel ? "Selected paragraph" : undefined}
                   >
-                    <Md text={view?.[b.id] ?? b.md} />
+                    <Md text={b.md} />
                     <CiteMarks cites={b.cites} active={isSel ? activeCite : null} onCite={(n) => { setSelected(b.id); setActiveCite(n); }} />
                     {(mut.stage === "idle" || mut.stage === "kept") && (
                       <span className="block-menu">
@@ -411,12 +372,6 @@ export function CoursePage() {
                   </div>
                 ) : (
                   <FigureView block={b} url={sec.data?.figures[b.r2Key]} />
-                )}
-                {i === 0 && mode !== "original" && view && b.kind === "text" && (
-                  <p className="small muted" style={{ marginTop: -8 }}>
-                    Rephrased for you. Same sources.{" "}
-                    <button type="button" className="link-btn" style={{ fontSize: 13 }} onClick={() => void pickMode("original")}>Show original</button>
-                  </p>
                 )}
                 {showForm && <MutateForm initial={mut.request} onCancel={() => setMut({ stage: "idle" })} onRun={(r) => void startMutation(b.id, r)} />}
                 {working && <div className="placeholder-box">{mut.stage === "working" && mut.steps.findIndex((s) => s.status === "active") >= 3 ? "Building the interactive example…" : "Rewriting…"}</div>}
@@ -441,7 +396,7 @@ export function CoursePage() {
             <li>Give me an interactive example</li>
           </ul>
         </aside>
-      ) : mut.stage === "working" || mut.stage === "review" || mut.stage === "saving" || mut.stage === "kept" ? (
+      ) : mut.stage === "working" || hasChange ? (
         <aside className="side-panel" aria-label="What is happening">
           {mut.stage === "working" ? (
             <>

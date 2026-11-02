@@ -95,6 +95,9 @@ h1, h2, h3, p { margin: 0; }
 .status-pill { font-size: 13px; }
 
 /* ---- command bar ---- */
+/* pinned to the bottom of the viewport while the page scrolls under it */
+.cmdbar-dock { position: sticky; bottom: 0; z-index: 5; margin-top: auto; width: 100%; align-self: center; display: flex; flex-direction: column; gap: 10px; padding: 12px 0 16px; background: #fff; }
+.cmdbar-dock .answer-card { max-height: 45vh; overflow-y: auto; background: #fff; }
 .cmdbar { margin-top: auto; width: 100%; display: flex; align-items: center; gap: 8px; border: 1px solid var(--input); border-radius: 12px; padding: 6px 6px 6px 16px; background: #fff; position: relative; }
 .cmdbar input { flex: 1; min-width: 0; height: 40px; border: none; outline: none; font: 400 15px var(--ui); color: var(--ink); background: transparent; }
 .kbd { font-size: 12px; color: var(--muted); border: 1px solid var(--input); border-radius: 4px; padding: 1px 6px; }

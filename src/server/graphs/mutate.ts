@@ -1,6 +1,6 @@
 import "./als";
 import { z } from "zod";
-import { Annotation, END, START, StateGraph, interrupt } from "@langchain/langgraph";
+import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint";
 import type { Env } from "../env";
 import type { AiCtx } from "../ai/meta";
@@ -349,19 +349,16 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
     return { ops, after, summary };
   }
 
-  async function review(s: S, config?: { configurable?: Record<string, unknown> }): Promise<Partial<S>> {
+  async function review(s: S): Promise<Partial<S>> {
     if (!s.ops.length) return { decision: "undo" };
-    // on resume LangGraph re-runs this node; only announce the pause the first time
-    const pad = (config?.configurable as { __pregel_scratchpad?: { resume?: unknown[]; nullResume?: unknown } } | undefined)?.__pregel_scratchpad;
-    const resuming = Boolean(pad?.resume?.length) || pad?.nullResume !== undefined;
-    if (!resuming) emit({ type: "run.waiting", runId: s.runId, summary: s.summary, section: s.after!, before: s.before });
-    const decision = interrupt({ summary: s.summary }) as string;
-    return { decision };
+    // changes are saved as soon as they pass verification; the reader offers Undo afterwards
+    emit({ type: "run.waiting", runId: s.runId, summary: s.summary, section: s.after!, before: s.before });
+    return { decision: "keep" };
   }
 
   async function commit(s: S): Promise<Partial<S>> {
     if (s.decision !== "keep") {
-      await trace(s, "You chose Undo; nothing was saved");
+      await trace(s, "Nothing changed; nothing was saved");
       emit({ type: "run.done", runId: s.runId, status: "undone" });
       return {};
     }
@@ -376,7 +373,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
       runId: s.runId,
     });
     await trace(s, res.overlay ? "Saved as your own change on top of the shared course" : `Saved as version ${res.courseVersion}`);
-    emit({ type: "run.done", runId: s.runId, status: "kept", courseVersion: res.courseVersion ?? undefined, message: res.overlay ? "Saved for you. The course owner's version is unchanged." : `Saved as version ${res.courseVersion}. You can undo it from the course history.` });
+    emit({ type: "run.done", runId: s.runId, status: "kept", courseVersion: res.courseVersion ?? undefined, message: res.overlay ? "Saved for you. The course owner's version is unchanged." : `Saved as version ${res.courseVersion}.` });
     return { courseVersion: res.courseVersion };
   }
 

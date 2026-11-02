@@ -9,7 +9,6 @@ import { courseAccess, errorResponse, signFileUrl } from "../lib/http";
 import { commitSection, commitSnapshot, courseSnapshot, courseView, loadSection } from "../lib/blocks";
 import { pathWithTitles } from "../course/practice";
 import { getAiCtx } from "../ai/meta";
-import { rephraseSection } from "../course/views";
 import { retryBuild } from "../course/buildJobs";
 import { assertQuota } from "../lib/quota";
 import { chunkToCite, searchChunks, type ChunkRow } from "../lib/chunks";
@@ -146,20 +145,6 @@ export const courses = new Hono<AppEnv>()
     await c.env.DB.prepare("INSERT OR IGNORE INTO reads (user_id, section_id, course_id, read_at) VALUES (?, ?, ?, ?)").bind(userId, c.req.param("sid"), access.course.id, Date.now()).run();
     return c.json({ ok: true });
   })
-  .post("/:id/sections/:sid/view", async (c) => {
-    // "Show as": a rephrased reading view, cached, never committed
-    const userId = c.get("userId");
-    const access = await courseAccess(c.env, c.req.param("id"), userId);
-    if (!access) return c.json({ error: "Not found" }, 404);
-    const { mode } = z.object({ mode: z.enum(["simpler", "analogy", "exam"]) }).parse(await c.req.json());
-    try {
-      const section = await loadSection(c.env, access.course.id, c.req.param("sid"), { userId });
-      const ctx = await getAiCtx(c.env, userId);
-      return c.json(await rephraseSection(c.env, ctx, access.course.id, section, mode));
-    } catch (err) {
-      return errorResponse(c, err);
-    }
-  })
   .post("/:id/sections/:sid/mutate", async (c) => {
     const userId = c.get("userId");
     const access = await courseAccess(c.env, c.req.param("id"), userId);
@@ -180,14 +165,16 @@ export const courses = new Hono<AppEnv>()
     }
   })
   .post("/:id/sections/:sid/edit", async (c) => {
-    // manual edits from the Editor are a full block list (validated), committed like any change
+    // manual edits from the Editor are a full block list (validated), committed like any change;
+    // the reader's Undo sends the section as it was before an auto-saved change
     const userId = c.get("userId");
     const access = await courseAccess(c.env, c.req.param("id"), userId);
     if (!access) return c.json({ error: "Not found" }, 404);
-    const body = z.object({ title: z.string().min(1).max(200), blocks: z.array(z.unknown()) }).parse(await c.req.json());
+    const body = z.object({ title: z.string().min(1).max(200), blocks: z.array(z.unknown()), undo: z.boolean().optional() }).parse(await c.req.json());
     const blocks = body.blocks.map((b) => BlockSchema.parse(b));
-    const res = await commitSection(c.env, { courseId: access.course.id, sectionId: c.req.param("sid"), title: body.title, blocks, userId, kind: "edit", summary: `Edited ${body.title}` });
-    if (res.courseVersion) await c.env.COURSE_DO.get(c.env.COURSE_DO.idFromName(access.course.id)).notifyVersion(access.course.id, res.courseVersion, `Edited ${body.title}`);
+    const summary = body.undo ? `Undid the last change to ${body.title}` : `Edited ${body.title}`;
+    const res = await commitSection(c.env, { courseId: access.course.id, sectionId: c.req.param("sid"), title: body.title, blocks, userId, kind: body.undo ? "undo" : "edit", summary });
+    if (res.courseVersion) await c.env.COURSE_DO.get(c.env.COURSE_DO.idFromName(access.course.id)).notifyVersion(access.course.id, res.courseVersion, summary);
     return c.json(res);
   })
   .get("/:id/history", async (c) => {
