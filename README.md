@@ -15,9 +15,9 @@ HyperLearn turns a student's own material into a course:
 - **A command bar on every screen** (`/` or Cmd+K, or speak to it) calls the same tools as the UI.
 
 <!-- screenshots -->
-| Reader with citations | Change anything | Practice re-plan |
-|---|---|---|
-| ![Reader](docs/screens/reader.png) | ![Mutate](docs/screens/mutate.png) | ![Practice](docs/screens/practice.png) |
+| Reader with citations | Change anything | Practice re-plan | Path adapted |
+|---|---|---|---|
+| ![Reader](docs/screens/reader.jpg) | ![Mutate](docs/screens/mutate.jpg) | ![Practice](docs/screens/practice.jpg) | ![Outline](docs/screens/outline.jpg) |
 
 ## Which Meta model does which job
 
@@ -27,7 +27,7 @@ HyperLearn turns a student's own material into a course:
 | **Muse Wonder** (`muse-wonder-1.0`) | Re-plans the learning path after a practice mistake (a small path diff, called rarely) |
 | **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`) | Lecture recordings → timestamped passages (audio citations); realtime mic input for the command bar |
 | **SAM 3.1** (`sam-3.1`) | Segmentation client and parser for cutting figures out of slide pages |
-| **Muse Spark Open** (open weights, on Modal) | Independent verifier: checks every rewritten sentence against its cited passage |
+| **Verifier slot** (`OPEN_MODEL_*`, OpenAI-compatible) | Checks every rewritten sentence against its cited passage. Built for an open-weight model (Muse Spark Open on Modal, or Muse Glimmer via vLLM): set a base URL + model id and it switches over. The live deployment currently points it at Muse Spark on the Meta Model API, and the UI labels it that way |
 | Muse Image | Not used in v1 |
 
 Two things the Meta Model API does not offer, and what we used instead: there is **no embeddings endpoint**, so retrieval uses Workers AI `bge-base-en-v1.5` in Cloudflare Vectorize; **Muse Code has no API model id** (it is a coding CLI), so custom HTML widgets are written by Muse Spark and run in a sandbox on a separate origin.
@@ -38,7 +38,7 @@ The AI never rewrites a whole section. A section is a list of typed blocks (text
 
 Before you see a change, `mutateGraph` (LangGraph.js inside a Durable Object) runs:
 
-1. **Sentence check (open weights):** every new sentence is checked against the passage it cites by Muse Spark Open, a different model from the writer.
+1. **Sentence check:** every new sentence is checked against the passage it cites by the verifier model (a separate call with its own prompt; designed for an open-weight model behind `OPEN_MODEL_*`).
 2. **Claim check (code, not a model):** a widget's `claims` (e.g. `A * [1, 1] == 3 * [1, 1]`) are recomputed with mathjs.
 3. **Browser check:** the widget is loaded in Cloudflare Browser Rendering; any console error fails it, and Muse Spark judges the screenshot against the request.
 4. **Retry, then drop:** failures go back to the writers with the error (max 2 retries); anything still unsupported is removed and the "What changed" panel says so.
@@ -67,7 +67,7 @@ flowchart LR
     SBX --- WID[Widget Worker: separate origin + strict CSP]
   end
   API & CDO & WF --> META[Meta Model API: Spark, Wonder, Voice Transcribe, SAM]
-  CDO & WF --> OPEN[Muse Spark Open on Modal: verifier]
+  CDO & WF --> OPEN[Verifier: OPEN_MODEL_* endpoint]
   CDO & WF --> LS[LangSmith traces]
   API --> CLERK[Clerk auth]
 ```
@@ -75,6 +75,7 @@ flowchart LR
 - **Ingest (Workflow):** PDF text with positions (unpdf) → regions with bounding boxes → Muse Spark structure and exam style → embeddings → Vectorize. Page images are rendered in the browser at upload (Workers have no canvas). Audio is cut into 16 kHz WAV parts in the browser and transcribed with timestamps.
 - **Build (Workflow):** outline → sections written source-first with chunk citations → exam-style exercises → sentence verification → version 1.
 - **Bring your own key:** keys are encrypted with AES-GCM (bound to the Clerk user id) and only decrypted per request. Without a key you are in demo mode on our key, under a hard global cap.
+- **Free-tier guard:** one Durable Object counts R2 storage and operations, Vectorize vectors and queries, Workers AI calls and Browser Rendering tests, capped at ~80% of each Cloudflare free allowance. When a cap is reached, uploads pause with a message to contact contact@radesh-govind.com; existing courses keep working.
 - **Security:** source text and web pages are wrapped as data in prompts; all model output is validated with zod; custom widgets run in `<iframe sandbox="allow-scripts">` on `hyperlearn-widgets.radesh-govind.com` with `default-src 'none'`.
 
 ## Built during the hackathon

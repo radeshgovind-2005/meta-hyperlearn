@@ -112,7 +112,8 @@ export function CoursePage() {
       if (closed) return;
       ws = new WebSocket(wsUrl(`/api/courses/${courseId}/ws`, token));
       ws.onmessage = (e) => {
-        const ev = JSON.parse(e.data as string) as RunEvent;
+        if (typeof e.data !== "string" || !e.data.startsWith("{")) return; // keepalive "pong"
+        const ev = JSON.parse(e.data) as RunEvent;
         if (ev.type === "course.version" && mutRef.current.stage === "idle") {
           void sec.reload();
           void outline.reload();

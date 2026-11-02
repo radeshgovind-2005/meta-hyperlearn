@@ -157,6 +157,14 @@ function Root() {
   );
 }
 
+// after a deploy, an open tab may ask for a chunk that no longer exists: reload once to get the new build
+window.addEventListener("vite:preloadError", () => {
+  if (!sessionStorage.getItem("hl-reloaded")) {
+    sessionStorage.setItem("hl-reloaded", "1");
+    window.location.reload();
+  }
+});
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Root />
