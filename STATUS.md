@@ -1,6 +1,8 @@
 # Status
 
-**Current step:** waiting for the human checklist (Cloudflare login, Clerk keys, Meta/LangSmith/open-weight keys) to run locally and deploy.
+**Current step:** deploy blocked on R2 enablement and Clerk instance choice (see BLOCKERS.md 1–2).
+
+Verified locally against the real Meta API (2026-11-02): ingest of 4 sources (PDF positions, ASR turns, exam style) → course build (45/45 sentences supported) → mutate simplify + widget (5/5 sentences, mathjs claims, Keep → v2) → practice grading (caught the ad+bc sign error) → adapt (Wonder inserted a 4-min review, 9/9 sentences, Keep → v3).
 
 ## Done (code complete, lint + types + 28 unit tests green)
 - Steps 1–8 implemented in code: auth, BYOK, ingest, course build, reader with citations, mutate with verify loop and Keep/Undo, history, practice + adapt, audio citations, voice input, Listen mode, open-weight verifier client, share/follow/copy/updates, command bar, research.
