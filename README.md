@@ -10,7 +10,10 @@ HyperLearn turns a student's own material into a course:
 
 - **Every sentence is cited.** Click a citation and the source pane shows the exact page with the region highlighted, or plays the lecture recording from that second.
 - **Change anything.** Select a paragraph and say "this is too complex, simplify it and give me an interactive example". The section changes in place: the AI emits patch operations, every new sentence is checked against its cited source, the interactive example is recomputed in code and tested in a real browser. The change is saved as soon as it passes, so the next request builds on it; **Undo** puts the section back.
-- **Practice in the style of your past exam.** A wrong answer re-plans your path (Muse Wonder inserts a short review from your own sources, as a diff you can keep or undo).
+- **Interactive examples you can actually play with.** Plots keep fixed, labelled axes so a slider visibly moves the curve; you drag a probe along it and read values live; each example sets a goal it checks in code ("push the frequency past 200 W", "find both eigen-directions").
+- **Practice in the style of your past exam, in 25 question types.** Multiple choice, select-all, true-or-false-then-fix, two-tier, numeric, maths expressions (checked for equivalence), three kinds of cloze, matching, ordering, Parsons problems, sorting, grids, highlighting, clicking the right spot on your own slide, labelling a slide, interactive challenges, estimation, spot-the-error and faded worked examples are graded in code the moment you answer; short answers, exam problems, justifications and "explain it out loud" are marked by Muse Spark against the exam's rubric. You also say how sure you are. A wrong answer re-plans your path (Muse Wonder inserts a short review from your own sources, as a diff you can keep or undo).
+- **No blocking waits.** A practice round opens immediately and the first question is ready in seconds while the rest are written behind it; long steps show what is happening and for how long.
+- **Listen.** Muse Spark rewrites each section as a spoken script (so "λ² − 7λ + 10" is read as "lambda squared minus seven lambda plus ten") for the browser voice; "Ask by voice" pauses and answers aloud.
 - **Share.** Others can **follow** your course (live updates, their own changes stay private) or **copy** it (their own version that can still pull your updates).
 - **A command bar on every screen** (`/` or Cmd+K, or speak to it) calls the same tools as the UI.
 
@@ -23,14 +26,14 @@ HyperLearn turns a student's own material into a course:
 
 | Model | Job in HyperLearn |
 |---|---|
-| **Muse Spark** (`muse-spark-1.3`) | Structures PDFs and slides, writes and rephrases blocks, extracts the exam style, grades answers, classifies requests, routes the command bar (tool calling), judges widget screenshots |
+| **Muse Spark** (`muse-spark-1.3`) | Structures PDFs and slides, writes and rephrases blocks, extracts the exam style, writes practice questions in 25 types, marks open answers, classifies requests, routes the command bar (tool calling), judges widget screenshots, writes the Listen script |
 | **Muse Wonder** (`muse-wonder-1.0`) | Re-plans the learning path after a practice mistake (a small path diff, called rarely) |
-| **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`) | Lecture recordings → timestamped passages (audio citations); realtime mic input for the command bar |
+| **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`) | Lecture recordings → timestamped passages (audio citations); realtime mic input for the command bar, "Ask by voice" in Listen mode and "explain it out loud" practice answers |
 | **SAM 3.1** (`sam-3.1`) | Segmentation client and parser for cutting figures out of slide pages |
 | **Verifier slot** (`OPEN_MODEL_*`, OpenAI-compatible) | Checks every rewritten sentence against its cited passage. Built for an open-weight model (Muse Spark Open on Modal, or Muse Glimmer via vLLM): set a base URL + model id and it switches over. The live deployment currently points it at Muse Spark on the Meta Model API, and the UI labels it that way |
 | Muse Image | Not used in v1 |
 
-Two things the Meta Model API does not offer, and what we used instead: there is **no embeddings endpoint**, so retrieval uses Workers AI `bge-base-en-v1.5` in Cloudflare Vectorize; **Muse Code has no API model id** (it is a coding CLI), so custom HTML widgets are written by Muse Spark and run in a sandbox on a separate origin.
+Three things the Meta Model API does not offer, and what we used instead: there is **no text-to-speech model** (Muse Voice Transcribe is speech to text only), so Listen uses the browser voice reading a script Muse Spark writes; there is **no embeddings endpoint**, so retrieval uses Workers AI `bge-base-en-v1.5` in Cloudflare Vectorize; **Muse Code has no API model id** (it is a coding CLI), so custom HTML widgets are written by Muse Spark and run in a sandbox on a separate origin.
 
 ## How verification works
 
@@ -39,8 +42,8 @@ The AI never rewrites a whole section. A section is a list of typed blocks (text
 Before you see a change, `mutateGraph` (LangGraph.js inside a Durable Object) runs:
 
 1. **Sentence check:** every new sentence is checked against the passage it cites by the verifier model (a separate call with its own prompt; designed for an open-weight model behind `OPEN_MODEL_*`).
-2. **Claim check (code, not a model):** a widget's `claims` (e.g. `A * [1, 1] == 3 * [1, 1]`) are recomputed with mathjs.
-3. **Browser check:** the widget is loaded in Cloudflare Browser Rendering; any console error fails it, and Muse Spark judges the screenshot against the request.
+2. **Claim check (code, not a model):** a widget's `claims` (e.g. `A * [1, 1] == 3 * [1, 1]`) are recomputed with mathjs, and structural checks reject a slider the curve ignores or a goal that cannot be reached.
+3. **Browser check:** the widget is loaded in Cloudflare Browser Rendering; any console error fails it, every slider is moved and must change the screenshot, and Muse Spark judges the final screenshot against the request.
 4. **Retry, then drop:** failures go back to the writers with the error (max 2 retries); anything still unsupported is removed and the "What changed" panel says so.
 5. **Save / Undo:** a verified change is committed right away (a new version for owners, a personal overlay for everyone else); Undo commits the previous blocks back. LangGraph checkpoints live in the Durable Object's SQLite, so runs survive eviction.
 

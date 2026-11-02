@@ -1,6 +1,6 @@
 # Status
 
-**Current step:** Course-build free-tier fix deployed; Parallel Computing rebuilt successfully from its existing sources.
+**Current step:** Widget fix, 25 practice question types, non-blocking waits and the Listen script are deployed (Worker version `9ee303d8-37e2-4597-bb5c-f812b46cb32a` plus a feedback-punctuation fix).
 
 Verified locally against the real Meta API (2026-11-02): ingest of 4 sources (PDF positions, ASR turns, exam style) → course build (45/45 sentences supported) → mutate simplify + widget (5/5 sentences, mathjs claims, Keep → v2) → practice grading (caught the ad+bc sign error) → adapt (Wonder inserted a 4-min review, 9/9 sentences, Keep → v3).
 
@@ -11,6 +11,14 @@ Verified locally against the real Meta API (2026-11-02): ingest of 4 sources (PD
 ## Next
 Record the 3-minute video, post on X, and submit before Wed Nov 4, 9:00 PM ET. Existing external limitations remain listed in BLOCKERS.md.
 
+## Widgets, question types, waiting, Listen (2026-11-02)
+- Plot widgets: fixed y-range over all slider settings, labelled ticks, dashed starting curve, draggable probe with live readout, optional goal checked in code. Vector widget: drag the arrow, counts eigen-directions found. Structural checks (unused slider, unreachable goal) and a browser check that each slider changes the screenshot feed the mutate retry loop.
+- Practice: 25 types in `src/shared/questions.ts`; 21 graded in code (`gradeResponse`), 4 by Muse Spark. Solutions never reach the browser before an answer. Migration 0003 (plan, writing lock, qtype, spec, confidence, response) applied remotely.
+- Rounds open instantly; `/practice/:id/write` writes 1 question, then the rest; broken specs get one repair call, then are dropped.
+- `Working` (elapsed + usual time) and skeletons replace "Loading…"; Listen fetches a cached Muse Spark script (`/sections/:id/listen`, R2 `listen/<sha>.json`) with Pause/Resume and Ask by voice.
+- Verified: 54 Workers tests, typecheck, lint; production via the seed API: 4 rounds covered all 25 types, all 23 code-graded answer keys self-check, session opens in 0.3–0.9 s, first question 4–9 s, code grading 0.2 s, Spark grading ~5 s, Listen script 7.6 s first / 0.4 s cached. Widgets checked in the browser on `/embed/widget` (goal turns green, ghost curve, drag).
+- Not exercised: the signed-in Practice page, reader Listen bar and Ask by voice in a browser (needs the owner's sign-in).
+
 ## Reader fixes (2026-11-02)
 - Removed the "Show as" toggle and its `/view` route.
 - Command bar is pinned to the bottom of the viewport on every screen (sticky dock).
@@ -18,7 +26,7 @@ Record the 3-minute video, post on X, and submit before Wed Nov 4, 9:00 PM ET. E
 - Verified on production (Worker version `02dfa257-edc5-4fb5-9162-58819c4d40b5`) with Playwright on the demo course: two stacked changes persisted across reload, Undo restored the original, and the test overlay was removed afterwards.
 
 ## Last deploy
-2026-11-02 19:05 UTC (version 02dfa257) · Worker `meta-hyperlearn` on https://hyperlearn.radesh-govind.com (Workers Free plan) and `hyperlearn-widgets` on https://hyperlearn-widgets.radesh-govind.com · `/api/health` ok (D1, R2, Vectorize, Meta API, quota) · demo course `crs_qdhs2ck5wt` seeded (4 sources, 8 sections).
+2026-11-02 ~20:40 UTC (widgets, question types, waiting, Listen). Previous: 2026-11-02 19:05 UTC (version 02dfa257) · Worker `meta-hyperlearn` on https://hyperlearn.radesh-govind.com (Workers Free plan) and `hyperlearn-widgets` on https://hyperlearn-widgets.radesh-govind.com · `/api/health` ok (D1, R2, Vectorize, Meta API, quota) · demo course `crs_qdhs2ck5wt` seeded (4 sources, 8 sections).
 
 ## Live UI pass (2026-11-02, signed in on production)
 Checked against design/screens: Sign in, Onboarding key, Empty library, Outline, Course reader (citations + source highlight), Mutate (ask → live steps → done with vector2d widget → Keep as overlay), Practice (grading → adapt re-plan → Keep), adapted Outline, History, Share (non-owner copy + owner invite), Invite (public), Settings AI and usage, Source, Palette.

@@ -163,7 +163,7 @@ export function gradeResponse(type: QType, spec: Spec, raw: unknown, seed: strin
       const opts = s.options as { text: string; why: string; correct: boolean }[];
       const parts = opts.map((o, i) => o.correct === picks.has(i));
       const wrong = opts.filter((_, i) => !parts[i]);
-      return done(fraction(parts), wrong.length ? wrong.map((o) => `${o.correct ? "Missed" : "Not this one"}: ${o.text}. ${o.why}`).join(" ") : "All the right options and none of the wrong ones.", opts.filter((o) => o.correct).map((o) => o.text).join("; "), `${wrong.length} option${wrong.length === 1 ? "" : "s"} wrong`, parts);
+      return done(fraction(parts), wrong.length ? wrong.map((o) => `${o.correct ? "Missed" : "Not this one"}: ${o.text.replace(/[.\s]+$/, "")}. ${o.why}`).join(" ") : "All the right options and none of the wrong ones.", opts.filter((o) => o.correct).map((o) => o.text).join("; "), `${wrong.length} option${wrong.length === 1 ? "" : "s"} wrong`, parts);
     }
     case "tf_fix": {
       const saysTrue = z.boolean().parse(r.isTrue);
