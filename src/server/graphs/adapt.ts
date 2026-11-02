@@ -90,7 +90,14 @@ export function buildAdaptGraph(deps: AdaptDeps, checkpointer: BaseCheckpointSav
       reasoningEffort: "medium",
       maxTokens: 3000,
       messages: [
-        { role: "system", content: `You re-plan a student's learning path after a practice mistake. Output a small diff, never a new course. Insert a review only if no earlier section already covers the missing concept well; otherwise prefer moving or nothing. ${DATA_RULE}` },
+        {
+          role: "system",
+          content: `You re-plan a student's learning path after a practice mistake. Output a small diff, never a new course.
+- If the mistake comes from a prerequisite (the student got the method right but slipped on an earlier skill), insert ONE short targeted review (3-5 minutes) right before the section the question was about, titled like "Determinants review", focused on exactly that slip. Do this even if a full section on the prerequisite exists earlier: the review is a quick recap of the specific mistake.
+- Move a section only to push a later topic after more practice; never move a section before its prerequisites.
+- If the mistake was careless and the concept is clearly mastered, change nothing.
+${DATA_RULE}`,
+        },
         {
           role: "user",
           content: `Current path:\n${path}\n\nThe question was about section ${s.question.sectionId ?? "unknown"} ("${s.question.concept}").\nDiagnosis: missing "${s.diagnosis!.concept}" (${s.diagnosis!.isPrerequisite ? "a prerequisite" : "the same topic"}). ${s.diagnosis!.explanation}\nInsert reviews right before the section the question was about. Reviews are 3–5 minutes.`,
@@ -98,6 +105,26 @@ export function buildAdaptGraph(deps: AdaptDeps, checkpointer: BaseCheckpointSav
       ],
     });
     plan.insert = plan.insert.slice(0, 1).filter((i) => view.path.includes(i.beforeSectionId));
+    // the student-facing message is written from the diff we will actually apply
+    const titleOf = (id: string) => sections.find((x) => x.id === id)?.title ?? "the next section";
+    const facts = [
+      `What the grader said: ${s.grade.feedback}`,
+      `Missing concept: ${s.diagnosis!.concept}`,
+      ...plan.insert.map((i) => `Change: add a ${i.minutes}-minute review "${i.title}" before "${titleOf(i.beforeSectionId)}"`),
+      ...plan.move.map((m) => `Change: move "${titleOf(m.sectionId)}" after "${titleOf(m.afterSectionId)}"`),
+    ];
+    if (!plan.insert.length && !plan.move.length) facts.push("Change: none, the course already covers it");
+    plan.message = (
+      await chatJson(ctx, {
+        model: MODELS.spark,
+        name: "replan-message",
+        schema: z.object({ message: z.string() }),
+        schemaName: "message",
+        reasoningEffort: "low",
+        maxTokens: 300,
+        messages: [{ role: "user", content: `Write 2 short sentences to the student: first what they got right and what the actual problem was, then what changed in their course and why. Plain, warm, no emoji.\n${facts.join("\n")}` }],
+      })
+    ).message;
     plan.move = plan.move.slice(0, 1).filter((m) => view.path.includes(m.sectionId) && view.path.includes(m.afterSectionId));
     await trace(s, `Re-planned the path: ${plan.insert.length} review inserted, ${plan.move.length} section moved`, MODELS.wonder);
     step(s, 2, "done");
@@ -153,13 +180,15 @@ export function buildAdaptGraph(deps: AdaptDeps, checkpointer: BaseCheckpointSav
     return { newSections: fixed, newPath: path };
   }
 
-  async function review(s: S): Promise<Partial<S>> {
+  async function review(s: S, config?: { configurable?: Record<string, unknown> }): Promise<Partial<S>> {
+    const pad = (config?.configurable as { __pregel_scratchpad?: { resume?: unknown[]; nullResume?: unknown } } | undefined)?.__pregel_scratchpad;
+    const resuming = Boolean(pad?.resume?.length) || pad?.nullResume !== undefined;
     const changed = s.newSections.length || s.plan?.move.length;
     if (!changed) {
       emit({ type: "run.done", runId: s.runId, status: "done", message: s.plan?.message });
       return { decision: "none" };
     }
-    emit({ type: "run.waiting", runId: s.runId, summary: [s.plan!.message], section: { id: "", courseId: s.courseId, version: 0, title: "", blocks: [] }, before: { id: "", courseId: s.courseId, version: 0, title: "", blocks: [] } });
+    if (!resuming) emit({ type: "run.waiting", runId: s.runId, summary: [s.plan!.message], section: { id: "", courseId: s.courseId, version: 0, title: "", blocks: [] }, before: { id: "", courseId: s.courseId, version: 0, title: "", blocks: [] } });
     return { decision: interrupt({ message: s.plan!.message }) as string };
   }
 

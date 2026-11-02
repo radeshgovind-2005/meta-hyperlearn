@@ -60,6 +60,7 @@ export async function generateQuestions(
         content: [
           `Write ${args.count} questions, easiest first${args.focusConcept ? `, all about "${args.focusConcept}"` : ", covering different sections"}.`,
           exam?.style ? `Copy this exam's style exactly (format, command words, notation):\n${examStyleText(exam.style, exam.filename)}` : "Use short exam-style questions with a worked answer.",
+          "Write NEW questions: same style, command words and point format as the exam, but different matrices and numbers than the exam's own questions. Each prompt is just the question (optional [n pts] at the end): no exam header, no instructions, no question numbers.",
           "sectionId must be one of the section ids below. Use plain text math like [[4, 1], [2, 3]] and λ² − 7λ + 10.",
           material,
         ].join("\n\n"),
