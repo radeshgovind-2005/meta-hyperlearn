@@ -46,7 +46,7 @@ Before you see a change, `mutateGraph` (LangGraph.js inside a Durable Object) ru
 
 Every run shows "How this was decided" (each step and the models used) and is traced to LangSmith.
 
-**Eval:** 18 real change requests on the demo course, scored by an independent judge (citation faithfulness = share of rewritten sentences supported by their cited passage): **EVAL_SCORE** (LangSmith experiment `EVAL_EXPERIMENT`).
+**Eval (citation faithfulness):** 18 real "change anything" requests on the live demo course ("simplify", "add an analogy", "show worked examples", "add a plot I can play with", …), each run through the full verify loop and then undone. An independent judge (Muse Spark, separate from the in-loop verifier) checked every rewritten sentence against the passage it cites: **82 of 88 sentences supported (93.2%)**, 93.8% mean per request. Each scored run is logged to LangSmith (project `hyperlearn-eval`); reproduce with `node scripts/eval.mjs --remote`. The weakest requests were "break it into simpler sentences" and "explain it like I'm new", where simplifying added framing the slides don't state.
 
 ## Architecture
 
