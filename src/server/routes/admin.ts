@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../env";
 import { sources } from "./sources";
 import { courses } from "./courses";
+import { runs } from "./runs";
 
 export const DEMO_OWNER = "demo-owner";
 
@@ -19,6 +20,7 @@ export const admin = new Hono<AppEnv>()
   })
   .route("/sources", sources)
   .route("/courses", courses)
+  .route("/runs", runs)
   .post("/courses/:id/demo", async (c) => {
     await c.env.DB.batch([
       c.env.DB.prepare("UPDATE courses SET is_demo = 0 WHERE is_demo = 1"),
