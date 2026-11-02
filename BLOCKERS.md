@@ -11,3 +11,4 @@
 | 6 | Web search for Research mode | Responses API `web_search` tool is not documented for the Model API | Research tries it; if it fails, it answers from the library only and says so in the trace | Verify after keys |
 | 7 | Seed material | No real lecture files provided | Original CC BY 4.0 slides + sample exam + synthetic narration (macOS `say`) in `seed/` | Done |
 | 8 | Uploads of PowerPoint / images | Ingest reads PDFs and audio only | Upload copy says "PDF or audio"; export slides to PDF | Accepted for v1 |
+| 10 | Text-to-speech for Listen | The Meta Model API has no speech synthesis model (Muse Voice Transcribe is speech to text only) | Browser `speechSynthesis` with the best installed English voice (Premium/Enhanced/Natural first) reading a Muse Spark script | Permanent; noted in README |
