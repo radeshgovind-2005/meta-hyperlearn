@@ -34,6 +34,9 @@ export const voice = new Hono<AppEnv>().get("/realtime", async (c) => {
 
   const pair = new WebSocketPair();
   const client = pair[1];
+  // binary frames default to Blob on current compatibility dates, and send(Blob) goes out as the
+  // text "[object Blob]", which Meta rejects as "Malformed message"
+  client.binaryType = "arraybuffer";
   client.accept();
   let bytes = 0;
   let closed = false;
