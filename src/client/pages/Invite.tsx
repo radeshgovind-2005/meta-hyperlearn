@@ -22,7 +22,9 @@ export function InvitePage() {
       .then(async (r) => (r.ok ? setP((await r.json()) as Preview) : setErr(((await r.json()) as { error: string }).error)))
       .catch(() => setErr("Could not load this invite"));
   }, [token]);
-  const first = p?.sharedBy.split(" ")[0] ?? "";
+  const anonymous = !p || /^a hyperlearn user$/i.test(p.sharedBy);
+  const first = anonymous ? "the owner" : p!.sharedBy.split(" ")[0];
+  const firstCap = anonymous ? "The owner" : first;
   const here = `/invite/${token}${how === "copy" ? "?how=copy" : ""}`;
   const accept = async () => {
     setBusy(true);
@@ -58,7 +60,7 @@ export function InvitePage() {
                 <legend style={{ fontSize: 14, fontWeight: 500, marginBottom: 10 }}>How do you want it?</legend>
                 {(
                   [
-                    ["follow", `Follow ${first}'s course`, `${first}'s updates reach you automatically`],
+                    ["follow", anonymous ? "Follow this course" : `Follow ${first}'s course`, `${firstCap}'s updates reach you automatically`],
                     ["copy", "Make my own copy", "It adapts to you"],
                   ] as const
                 ).map(([k, t, d]) => (

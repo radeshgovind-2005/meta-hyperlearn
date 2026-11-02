@@ -5,7 +5,7 @@ import { useApp } from "../lib/app";
 import { Dialog } from "./Shell";
 
 export function ShareDialog({ courseId, title, role, onClose }: { courseId: string; title: string; role: string; onClose: () => void }) {
-  const { toast } = useApp();
+  const { toast, reloadCourses } = useApp();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"follow" | "copy">("follow");
   const [email, setEmail] = useState("");
@@ -33,6 +33,7 @@ export function ShareDialog({ courseId, title, role, onClose }: { courseId: stri
               try {
                 const r = await api<{ courseId: string }>(`/api/courses/${courseId}/fork`, { body: {} });
                 toast("Made your own copy");
+                void reloadCourses();
                 onClose();
                 navigate(`/courses/${r.courseId}`);
               } catch (e) {

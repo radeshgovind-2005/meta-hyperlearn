@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useUser } from "@clerk/clerk-react";
 import { api } from "./api";
 
 export type Me = {
@@ -58,6 +59,15 @@ export function AppProvider({ children, onPalette }: { children: ReactNode; onPa
     void reloadMe().catch(() => {});
     void reloadCourses().catch(() => {});
   }, [reloadMe, reloadCourses]);
+
+  // keep the server's display name in sync with Clerk (used on invites and "shared by")
+  const { user } = useUser();
+  useEffect(() => {
+    if (!user) return;
+    const name = user.fullName || user.username || undefined;
+    const email = user.primaryEmailAddress?.emailAddress;
+    void api("/api/me/profile", { method: "PUT", body: { name, email } }).catch(() => {});
+  }, [user?.id, user?.fullName]);
 
   const toast = useCallback((msg: string) => {
     setToastMsg(msg);
