@@ -10,6 +10,7 @@ import { invitePublic, share } from "./routes/share";
 import { tutor } from "./routes/tutor";
 import { voice } from "./routes/voice";
 import { admin } from "./routes/admin";
+import { runs } from "./routes/runs";
 import { pingOpenModel, openModelConfigured, openModelLabel } from "./ai/openModel";
 
 export { CourseDO } from "./do/CourseDO";
@@ -102,6 +103,7 @@ app.route("/api/courses", courses);
 app.route("/api/practice", practice);
 app.route("/api/tutor", tutor);
 app.route("/api/voice", voice);
+app.route("/api/runs", runs);
 app.route("/api", share);
 
 app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));

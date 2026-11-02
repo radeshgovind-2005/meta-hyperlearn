@@ -10,6 +10,7 @@ import { commitSection, commitSnapshot, courseSnapshot, courseView, loadSection 
 import { pathWithTitles } from "../course/practice";
 import { getAiCtx } from "../ai/meta";
 import { rephraseSection } from "../course/views";
+import { chunkToCite, searchChunks, type ChunkRow } from "../lib/chunks";
 
 export async function sourcesPayload(env: Env, blocks: Block[], courseId: string) {
   const ids = new Set<string>();
@@ -212,6 +213,21 @@ export const courses = new Hono<AppEnv>()
     const req = new Request(new URL(`/ws`, c.req.url), c.req.raw);
     req.headers.set("X-User-Id", userId);
     return c.env.COURSE_DO.get(c.env.COURSE_DO.idFromName(access.course.id)).fetch(req);
+  })
+  .get("/:id/search", async (c) => {
+    // Editor: find passages in this course's sources to add verbatim
+    const userId = c.get("userId");
+    const access = await courseAccess(c.env, c.req.param("id"), userId);
+    if (!access) return c.json({ error: "Not found" }, 404);
+    const q = (c.req.query("q") ?? "").trim();
+    const { results: srcs } = await c.env.DB.prepare("SELECT s.id, s.filename, s.kind FROM sources s JOIN course_sources cs ON cs.source_id = s.id WHERE cs.course_id = ?").bind(access.course.id).all<{ id: string; filename: string; kind: string }>();
+    const names = new Map(srcs.map((s) => [s.id, s]));
+    const chunks = q
+      ? await searchChunks(c.env, q, srcs.map((s) => s.id), 8)
+      : (await c.env.DB.prepare(`SELECT * FROM chunks WHERE source_id IN (${srcs.map(() => "?").join(",") || "''"}) ORDER BY source_id, ord LIMIT 8`).bind(...srcs.map((s) => s.id)).all<ChunkRow>()).results;
+    return c.json({
+      items: chunks.map((ch) => ({ cite: chunkToCite(ch), text: ch.text, kind: names.get(ch.source_id)?.kind ?? "", filename: names.get(ch.source_id)?.filename ?? "" })),
+    });
   })
   .get("/:id/view", async (c) => {
     const userId = c.get("userId");

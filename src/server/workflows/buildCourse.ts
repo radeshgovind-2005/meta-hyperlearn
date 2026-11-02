@@ -25,7 +25,7 @@ export class BuildCourseWorkflow extends WorkflowEntrypoint<Env, BuildParams> {
       });
       await step.do("trace-outline", async () => {
         await recordRunTrace(env, runId, { label: `Planned ${outline.chapters.length} chapters, ${outline.chapters.reduce((n, c) => n + c.sections.length, 0)} sections`, model: "muse-spark-1.3" });
-        await env.DB.prepare("UPDATE courses SET title = ?, description = ? WHERE id = ?").bind(outline.title, outline.description, courseId).run();
+        await env.DB.prepare("UPDATE courses SET title = CASE WHEN title = 'New course' THEN ? ELSE title END, description = ? WHERE id = ?").bind(outline.title, outline.description, courseId).run();
       });
 
       const flat = outline.chapters.flatMap((ch) => ch.sections.map((s) => ({ ...s, chapter: ch.title })));

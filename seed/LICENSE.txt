@@ -1,0 +1,2 @@
+The demo material in this folder was written for HyperLearn and is released under CC BY 4.0.
+The lecture recording is a synthetic narration (macOS text-to-speech) of the L07 slides.

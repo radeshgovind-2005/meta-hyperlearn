@@ -4,7 +4,7 @@ import type { AppEnv, Env } from "../env";
 import { courseAccess, errorResponse } from "../lib/http";
 import { asData, chat, DATA_RULE, getAiCtx, metaFetch, recordSpend, type ToolDef } from "../ai/meta";
 import { MODELS, tokenCost } from "../ai/models";
-import { chunkToCite, formatChunksForPrompt, searchChunks } from "../lib/chunks";
+import { chunkToCite, searchChunks } from "../lib/chunks";
 import { pathWithTitles } from "../course/practice";
 import { fmtTime } from "../course/build";
 import { createRun, finishRun, recordRunTrace } from "../lib/runs";

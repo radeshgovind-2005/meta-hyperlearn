@@ -1,0 +1,8 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "hyperlearn-widgets",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "routes": [{ "pattern": "hyperlearn-widgets.radesh-govind.com", "custom_domain": true }],
+  "vars": { "APP_ORIGIN": "https://hyperlearn.radesh-govind.com" }
+}
