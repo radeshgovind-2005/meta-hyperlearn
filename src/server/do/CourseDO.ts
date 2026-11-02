@@ -9,6 +9,7 @@ import { ADAPT_STEPS, buildAdaptGraph } from "../graphs/adapt";
 import { endTrace, startTrace } from "../lib/tracing";
 import { finishRun, recordRunTrace } from "../lib/runs";
 import { MODEL_LABELS } from "../ai/models";
+import { flushQuota, meteredEnv } from "../lib/quota";
 
 export type MutateInput = { runId: string; userId: string; courseId: string; sectionId: string; blockId: string; request: string; concept: string; before: Section };
 export type AdaptInput = {
@@ -28,6 +29,7 @@ export class CourseDO extends DurableObject<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    (this as unknown as { env: Env }).env = meteredEnv(env);
     const sql = ctx.storage.sql;
     sql.exec("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
     sql.exec("CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, graph TEXT NOT NULL, user_id TEXT NOT NULL, status TEXT NOT NULL)");
@@ -167,6 +169,7 @@ export class CourseDO extends DurableObject<Env> {
       await finishRun(this.env, runId, status, undefined, cost);
       if (status !== "waiting") await this.saver.deleteThread(runId);
       this.ctx.waitUntil(endTrace(trace, { status, cost }));
+      this.ctx.waitUntil(flushQuota(this.env));
     }
   }
 

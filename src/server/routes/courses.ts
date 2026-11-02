@@ -10,6 +10,7 @@ import { commitSection, commitSnapshot, courseSnapshot, courseView, loadSection 
 import { pathWithTitles } from "../course/practice";
 import { getAiCtx } from "../ai/meta";
 import { rephraseSection } from "../course/views";
+import { assertQuota } from "../lib/quota";
 import { chunkToCite, searchChunks, type ChunkRow } from "../lib/chunks";
 
 export async function sourcesPayload(env: Env, blocks: Block[], courseId: string) {
@@ -75,6 +76,7 @@ export const courses = new Hono<AppEnv>()
     if (results.length !== body.sourceIds.length) return c.json({ error: "Some sources were not found" }, 400);
     if (results.some((r) => r.status !== "ready")) return c.json({ error: "Wait until every source is ready" }, 409);
     if (!results.some((r) => r.kind !== "exam" && r.kind !== "audio")) return c.json({ error: "Add at least one document (slides, paper or notes)" }, 400);
+    await assertQuota(c.env, ["classA", "ai", "vectorQueries"]);
     const id = randomId("crs");
     const now = Date.now();
     await c.env.DB.batch([
@@ -145,6 +147,7 @@ export const courses = new Hono<AppEnv>()
     const sectionId = c.req.param("sid");
     try {
       await getAiCtx(c.env, userId); // fail fast without a key or budget
+      await assertQuota(c.env, ["classA"]);
       const before: Section = await loadSection(c.env, access.course.id, sectionId, { userId });
       if (!before.blocks.some((b) => b.id === blockId)) return c.json({ error: "That block is no longer in this section" }, 409);
       const concept = (await c.env.DB.prepare("SELECT concept FROM sections WHERE id = ?").bind(sectionId).first<string>("concept")) ?? before.title;

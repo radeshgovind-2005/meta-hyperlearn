@@ -6,6 +6,7 @@ import { chatJson } from "../ai/meta";
 import { MODELS } from "../ai/models";
 import type { WidgetSpec } from "../../shared/types";
 import { traceChild } from "../lib/tracing";
+import { count, exhausted, keys } from "../lib/quota";
 
 export type RenderCheck = { ok: boolean; errors: string[]; judge: { ok: boolean; reason: string } | null; screenshot?: string; unavailable?: string };
 
@@ -18,6 +19,8 @@ const b64url = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/
  */
 export async function renderAndJudge(env: Env, ctx: AiCtx, spec: WidgetSpec, request: string): Promise<RenderCheck> {
   return traceChild(ctx.trace, "browser-render", "tool", { template: spec.template }, async () => {
+    if (await exhausted(env, ["browser"])) return { ok: true, errors: [], judge: null, unavailable: "daily browser test allowance used" };
+    count(keys.browser());
     const errors: string[] = [];
     let screenshot: string | undefined;
     let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;

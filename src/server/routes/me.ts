@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { AppEnv } from "../env";
 import { encryptSecret } from "../lib/crypto";
 import { verifyMetaKey } from "../ai/meta";
+import { quotaStatus } from "../lib/quota";
 
 const month = () => new Date().toISOString().slice(0, 7);
 
@@ -24,6 +25,7 @@ export const me = new Hono<AppEnv>()
       capUsd: user?.monthly_cap_usd ?? 10,
       spentUsd: spent,
       onboarded: Boolean(user?.onboarded),
+      limits: await quotaStatus(env),
       demo: { courseId: demo ?? null, capUsd: Number(env.DEMO_SPEND_CAP_USD || 40), spentUsd: demoSpent, available: Boolean(env.META_API_KEY) },
     });
   })

@@ -1,5 +1,6 @@
 import type { Env } from "../env";
 import { MODELS } from "./models";
+import { assertQuota, count, keys } from "../lib/quota";
 
 export const EMBED_DIMS = 768;
 
@@ -7,6 +8,8 @@ export const EMBED_DIMS = 768;
 export async function embed(env: Env, texts: string[]): Promise<number[][]> {
   const out: number[][] = [];
   for (let i = 0; i < texts.length; i += 50) {
+    await assertQuota(env, ["ai"]);
+    count(keys.ai());
     const batch = texts.slice(i, i + 50).map((t) => t.slice(0, 2000));
     const res = (await env.AI.run(MODELS.embed as keyof AiModels, { text: batch } as never)) as unknown as { data: number[][] };
     out.push(...res.data);

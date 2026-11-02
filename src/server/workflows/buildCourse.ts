@@ -1,5 +1,6 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import type { Env } from "../env";
+import { flushQuota, meteredEnv } from "../lib/quota";
 import { getAiCtx } from "../ai/meta";
 import { gatherSectionChunks, loadSourcesFor, planOutline, verifyBlocks, writeSection } from "../course/build";
 import { putBlocks } from "../lib/blocks";
@@ -15,7 +16,7 @@ const retry = { retries: { limit: 2, delay: "5 seconds" as const, backoff: "expo
 export class BuildCourseWorkflow extends WorkflowEntrypoint<Env, BuildParams> {
   async run(event: WorkflowEvent<BuildParams>, step: WorkflowStep) {
     const { courseId, userId, runId, goal } = event.payload;
-    const env = this.env;
+    const env = meteredEnv(this.env);
     const progress = (p: string) => env.DB.prepare("UPDATE courses SET progress = ? WHERE id = ?").bind(p, courseId).run();
     try {
       await step.do("progress-outline", async () => { await progress("Planning the outline"); });
@@ -84,6 +85,7 @@ export class BuildCourseWorkflow extends WorkflowEntrypoint<Env, BuildParams> {
         ]);
         await recordRunTrace(env, runId, { label: `Checked ${checked} sentences against their sources: ${supported} supported, the rest removed`, model: written[0]?.verifier });
         await finishRun(env, runId, "done");
+        await flushQuota(env);
         return 1;
       });
       return { version };

@@ -3,6 +3,7 @@ import { getAuth } from "@clerk/hono";
 import { verifyToken } from "@clerk/backend";
 import type { AppEnv, Env } from "../env";
 import { BudgetError, ModelError } from "../ai/meta";
+import { QuotaError } from "./quota";
 
 export const requireUser: MiddlewareHandler<AppEnv> = async (c, next) => {
   const auth = getAuth(c);
@@ -43,6 +44,7 @@ export async function courseAccess(env: Env, courseId: string, userId: string): 
 }
 
 export function errorResponse(c: Context, err: unknown) {
+  if (err instanceof QuotaError) return c.json({ error: err.message, code: "quota" }, 429);
   if (err instanceof BudgetError) return c.json({ error: err.message, code: "budget" }, 402);
   if (err instanceof ModelError) return c.json({ error: err.message }, err.status === 401 ? 401 : 502);
   console.error(err);

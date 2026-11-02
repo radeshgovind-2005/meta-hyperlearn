@@ -21,6 +21,7 @@ import { SharedPage, UpdatesPage } from "./pages/Shared";
 import { SettingsAccountPage, SettingsKeyPage } from "./pages/Settings";
 import { ResearchPage } from "./pages/Research";
 import { EmbedWidgetPage } from "./pages/EmbedWidget";
+import { PrivacyPage, TermsPage } from "./pages/Legal";
 
 type Config = { clerkPublishableKey: string; widgetsOrigin: string };
 const ConfigCtx = createContext<Config>({ clerkPublishableKey: "", widgetsOrigin: "" });
@@ -117,6 +118,8 @@ function ClerkWithRouter({ config }: { config: Config }) {
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/invite/:token" element={<InvitePage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="/embed/widget" element={<EmbedWidgetPage />} />
         <Route
           path="*"

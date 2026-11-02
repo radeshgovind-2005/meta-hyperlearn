@@ -28,6 +28,13 @@ export interface Env {
   WIDGETS_ORIGIN: string;
   APP_ORIGIN: string;
   SEED_TOKEN?: string;
+  QUOTA_STORAGE_GB?: string;
+  QUOTA_R2_CLASS_A?: string;
+  QUOTA_R2_CLASS_B?: string;
+  QUOTA_VECTORS?: string;
+  QUOTA_VECTOR_QUERIES?: string;
+  QUOTA_AI_CALLS_DAY?: string;
+  QUOTA_BROWSER_DAY?: string;
 }
 
 export type AppVars = { userId: string };

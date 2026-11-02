@@ -1,6 +1,7 @@
 import type { Env } from "../env";
 import type { Cite } from "../../shared/types";
 import { embed } from "../ai/embed";
+import { count, exhausted, keys } from "./quota";
 
 export type ChunkRow = { id: string; source_id: string; ord: number; text: string; page: number | null; bbox: string | null; t_start: number | null; t_end: number | null; section_path: string | null };
 
@@ -55,6 +56,9 @@ export async function evidenceForCites(env: Env, cites: Cite[]): Promise<string[
 /** Semantic search over the given sources. */
 export async function searchChunks(env: Env, query: string, sourceIds: string[], topK = 8): Promise<ChunkRow[]> {
   if (!sourceIds.length) return [];
+  // over the free search allowance we degrade to "no extra context" rather than failing
+  if (await exhausted(env, ["vectorQueries", "ai"])) return [];
+  count(keys.vectorQueries());
   const [vector] = await embed(env, [query]);
   const res = await env.VECTORS.query(vector, { topK, filter: { sourceId: { $in: sourceIds } }, returnMetadata: "none" });
   return getChunks(env, res.matches.map((m) => m.id));

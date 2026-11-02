@@ -6,6 +6,7 @@ import { asData, chatJson, DATA_RULE } from "../ai/meta";
 import { transcribeWav } from "../ai/asr";
 import { embed } from "../ai/embed";
 import { MODELS } from "../ai/models";
+import { assertQuota, count, keys } from "../lib/quota";
 import { mergeSmallRegions, regionsFromItems } from "./pdfLayout";
 
 // ingestGraph nodes. Each runs as a durable Cloudflare Workflow step.
@@ -155,6 +156,8 @@ export async function embedSource(env: Env, sourceId: string, ownerId: string): 
   for (let i = 0; i < results.length; i += 50) {
     const batch = results.slice(i, i + 50);
     const vectors = await embed(env, batch.map((c) => (c.section_path ? `${c.section_path}: ${c.text}` : c.text)));
+    await assertQuota(env, ["vectors"]);
+    count(keys.vectors(), batch.length);
     await env.VECTORS.upsert(
       batch.map((c, k) => ({
         id: c.id,

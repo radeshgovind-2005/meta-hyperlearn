@@ -4,6 +4,7 @@ import type { AppEnv, Env } from "../env";
 import { randomId } from "../lib/crypto";
 import { createRun } from "../lib/runs";
 import { signFileUrl } from "../lib/http";
+import { assertQuota, count, keys } from "../lib/quota";
 
 const KINDS = ["slides", "paper", "notes", "exam", "audio"] as const;
 const MAX_BYTES = 95 * 1024 * 1024;
@@ -72,6 +73,7 @@ export const sources = new Hono<AppEnv>()
     const body = z
       .object({ filename: z.string().min(1).max(200), kind: z.enum(KINDS), mime: z.string().max(100), size: z.number().int().min(1).max(MAX_BYTES), title: z.string().max(200).optional() })
       .parse(await c.req.json());
+    await assertQuota(c.env, ["storage", "classA", "vectors", "ai"], body.size);
     const id = randomId("src");
     const ext = body.filename.split(".").pop()?.toLowerCase() ?? "bin";
     const r2Key = `sources/${id}/original.${ext}`;
@@ -87,6 +89,7 @@ export const sources = new Hono<AppEnv>()
     if (!src) return c.json({ error: "Not found" }, 404);
     const body = c.req.raw.body;
     if (!body) return c.json({ error: "Empty upload" }, 400);
+    await assertQuota(c.env, ["storage", "classA"], Number(c.req.header("Content-Length") ?? 0));
     await c.env.FILES.put(src.r2_key, body, { httpMetadata: { contentType: src.mime } });
     return c.json({ ok: true });
   })
@@ -95,6 +98,7 @@ export const sources = new Hono<AppEnv>()
     if (!src) return c.json({ error: "Not found" }, 404);
     const n = Number(c.req.param("n"));
     if (!Number.isInteger(n) || n < 1 || n > 2000) return c.json({ error: "Bad page" }, 400);
+    await assertQuota(c.env, ["storage", "classA"], Number(c.req.header("Content-Length") ?? 0));
     await c.env.FILES.put(`sources/${src.id}/pages/${n}.png`, c.req.raw.body!, { httpMetadata: { contentType: "image/png" } });
     return c.json({ ok: true });
   })
@@ -103,6 +107,7 @@ export const sources = new Hono<AppEnv>()
     if (!src) return c.json({ error: "Not found" }, 404);
     const k = Number(c.req.param("k"));
     const offsetMs = Number(c.req.query("offsetMs") ?? 0);
+    await assertQuota(c.env, ["storage", "classA"], Number(c.req.header("Content-Length") ?? 0));
     const key = `sources/${src.id}/segments/${k}.wav`;
     await c.env.FILES.put(key, c.req.raw.body!, { httpMetadata: { contentType: "audio/wav" } });
     const meta = src.meta ? JSON.parse(src.meta) : {};
@@ -116,6 +121,7 @@ export const sources = new Hono<AppEnv>()
     const userId = c.get("userId");
     const src = await ownSource(c.env, c.req.param("id"), userId);
     if (!src) return c.json({ error: "Not found" }, 404);
+    await assertQuota(c.env, ["vectors", "ai"]);
     const runId = await startIngest(c.env, src.id, userId);
     return c.json({ runId });
   })
@@ -153,9 +159,15 @@ export const sources = new Hono<AppEnv>()
     const inCourse = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM course_sources WHERE source_id = ?").bind(src.id).first<number>("n");
     if (inCourse) return c.json({ error: "This source is used by a course. Remove it from the course first." }, 409);
     const { results } = await c.env.DB.prepare("SELECT id FROM chunks WHERE source_id = ?").bind(src.id).all<{ id: string }>();
-    if (results.length) await c.env.VECTORS.deleteByIds(results.map((r) => r.id));
+    if (results.length) {
+      await c.env.VECTORS.deleteByIds(results.map((r) => r.id));
+      count(keys.vectors(), -results.length);
+    }
     await c.env.DB.batch([c.env.DB.prepare("DELETE FROM chunks WHERE source_id = ?").bind(src.id), c.env.DB.prepare("DELETE FROM sources WHERE id = ?").bind(src.id)]);
     const listed = await c.env.FILES.list({ prefix: `sources/${src.id}/` });
-    if (listed.objects.length) await c.env.FILES.delete(listed.objects.map((o) => o.key));
+    if (listed.objects.length) {
+      await c.env.FILES.delete(listed.objects.map((o) => o.key));
+      count(keys.storage(), -listed.objects.reduce((n, o) => n + o.size, 0));
+    }
     return c.json({ ok: true });
   });

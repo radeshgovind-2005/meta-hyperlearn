@@ -9,6 +9,7 @@ export type Me = {
   spentUsd: number;
   onboarded: boolean;
   demo: { courseId: string | null; capUsd: number; spentUsd: number; available: boolean };
+  limits: { contact: string; uploadsBlocked: string | null; usage: Record<string, number> };
 };
 
 export type CourseItem = {

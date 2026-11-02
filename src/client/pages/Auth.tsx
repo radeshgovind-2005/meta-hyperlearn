@@ -32,7 +32,9 @@ function AuthLayout({ title, subtitle, children }: { title: string; subtitle: st
         </section>
         <div className="auth-foot">
           <span className="pill-note">Built at the Meta Global AI Developer Hackathon · Cerebral Valley</span>
-          <span>Secured by Clerk</span>
+          <span>
+            Secured by Clerk · <a href="/terms" style={{ color: "var(--muted)" }}>Terms</a> · <a href="/privacy" style={{ color: "var(--muted)" }}>Privacy</a>
+          </span>
         </div>
       </main>
       <aside className="auth-aside" aria-hidden="true">

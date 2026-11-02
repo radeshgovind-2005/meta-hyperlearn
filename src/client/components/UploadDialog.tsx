@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { accepted, guessKind, uploadSource, type Kind } from "../lib/upload";
 import { Dialog } from "./Shell";
 import { Upload } from "./Icons";
+import { useApp } from "../lib/app";
 
 type Item = { key: string; file: File; kind: Kind; id?: string; label: string; pct: number; status: "uploading" | "processing" | "ready" | "failed"; error?: string };
 
@@ -67,6 +68,18 @@ export function UploadDialog({ onClose, initialFiles, onDone }: { onClose: () =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
+  const { me } = useApp();
+  const blocked = me?.limits?.uploadsBlocked;
+  if (blocked) {
+    return (
+      <Dialog title="Add sources" onClose={onClose}>
+        <p style={{ fontSize: 15, lineHeight: 1.5, color: "var(--body)" }}>
+          New uploads are paused: HyperLearn has reached its free {blocked} limit. Contact <a href={`mailto:${me!.limits.contact}`}>{me!.limits.contact}</a> to get more space.
+        </p>
+        <div className="row"><button type="button" className="btn" onClick={onClose}>Close</button></div>
+      </Dialog>
+    );
+  }
   const exam = items.find((i) => i.kind === "exam");
   const ready = items.filter((i) => i.status === "ready" && i.id);
   return (

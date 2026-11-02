@@ -1,5 +1,6 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import type { Env } from "../env";
+import { flushQuota, meteredEnv } from "../lib/quota";
 import { getAiCtx } from "../ai/meta";
 import { embedSource, extractPdf, loadSource, setProgress, structureSource, transcribeSegment } from "../ingest/pipeline";
 import { recordRunTrace } from "../lib/runs";
@@ -12,7 +13,7 @@ const retry = { retries: { limit: 2, delay: "5 seconds" as const, backoff: "expo
 export class IngestWorkflow extends WorkflowEntrypoint<Env, IngestParams> {
   async run(event: WorkflowEvent<IngestParams>, step: WorkflowStep) {
     const { sourceId, userId, runId } = event.payload;
-    const env = this.env;
+    const env = meteredEnv(this.env);
     try {
       const src = await step.do("load", async () => loadSource(env, sourceId));
       const isAudio = src.kind === "audio";
@@ -57,6 +58,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<Env, IngestParams> {
       await recordRunTrace(env, runId, { label: `Indexed ${n} passages`, model: "@cf/baai/bge-base-en-v1.5" });
 
       await step.do("done", async () => {
+        await flushQuota(env);
         await setProgress(env, sourceId, "Ready", "ready");
         await env.DB.prepare("UPDATE runs SET status = 'done', finished_at = ? WHERE id = ?").bind(Date.now(), runId).run();
       });

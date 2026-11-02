@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { clerkMiddleware } from "@clerk/hono";
 import type { AppEnv } from "./env";
 import { requireUser, verifyFileSig } from "./lib/http";
+import { assertQuota, flushQuota, meteredEnv, QuotaError, quotaStatus } from "./lib/quota";
 import { me } from "./routes/me";
 import { sources } from "./routes/sources";
 import { courses } from "./routes/courses";
@@ -22,6 +23,7 @@ const app = new Hono<AppEnv>();
 
 app.onError((err, c) => {
   console.error(err);
+  if (err instanceof QuotaError) return c.json({ error: err.message, code: "quota" }, 429);
   if ((err as { name?: string }).name === "ZodError") return c.json({ error: "Invalid request", issues: (err as unknown as { issues: unknown }).issues }, 400);
   return c.json({ error: (err as Error).message ?? "Unexpected error" }, 500);
 });
@@ -56,7 +58,8 @@ app.get("/api/health", async (c) => {
       return { model: openModelLabel(env) };
     }),
   ]);
-  const checks = { d1, r2, vectorize, meta, openWeight };
+  const quota = await check(async () => quotaStatus(env));
+  const checks = { d1, r2, vectorize, meta, openWeight, quota };
   const ok = d1.ok && r2.ok && vectorize.ok && meta.ok;
   return c.json({ ok, checks, time: new Date().toISOString() }, ok ? 200 : 503);
 });
@@ -66,6 +69,11 @@ app.get("/api/config", (c) => c.json({ clerkPublishableKey: c.env.CLERK_PUBLISHA
 app.get("/api/files/*", async (c) => {
   const key = decodeURIComponent(c.req.path.slice("/api/files/".length));
   if (!(await verifyFileSig(c.env, key, c.req.query("exp") ?? "", c.req.query("sig") ?? ""))) return c.json({ error: "Link expired" }, 403);
+  try {
+    await assertQuota(c.env, ["classB"]);
+  } catch (err) {
+    return c.json({ error: (err as QuotaError).message, code: "quota" }, 429);
+  }
   const range = c.req.header("Range");
   let r2Range: R2Range | undefined;
   const m = range?.match(/bytes=(\d*)-(\d*)/);
@@ -109,4 +117,11 @@ app.route("/api", share);
 
 app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 
-export default app;
+export default {
+  async fetch(request: Request, env: AppEnv["Bindings"], ctx: ExecutionContext): Promise<Response> {
+    const metered = meteredEnv(env);
+    const res = await app.fetch(request, metered, ctx);
+    ctx.waitUntil(flushQuota(metered));
+    return res;
+  },
+} satisfies ExportedHandler<AppEnv["Bindings"]>;

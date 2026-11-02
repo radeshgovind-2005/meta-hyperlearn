@@ -8,6 +8,7 @@ export class UserDO extends DurableObject<Env> {
     ctx.blockConcurrencyWhile(async () => {
       this.ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS spend (bucket TEXT PRIMARY KEY, usd REAL NOT NULL)`);
       this.ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS calls (ts INTEGER, model TEXT, usd REAL, mode TEXT)`);
+      this.ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS quota (key TEXT PRIMARY KEY, value REAL NOT NULL)`);
     });
   }
 
@@ -24,6 +25,19 @@ export class UserDO extends DurableObject<Env> {
     );
     this.ctx.storage.sql.exec("INSERT INTO calls (ts, model, usd, mode) VALUES (?, ?, ?, ?)", Date.now(), model, usd, mode);
     return this.getSpend(bucket);
+  }
+
+  /** App-wide free-tier counters (used on the "quota-global" instance). Returns all current values. */
+  async addQuota(deltas: Record<string, number>): Promise<Record<string, number>> {
+    for (const [k, v] of Object.entries(deltas)) {
+      this.ctx.storage.sql.exec("INSERT INTO quota (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = MAX(0, value + excluded.value)", k, v);
+    }
+    return Object.fromEntries(this.ctx.storage.sql.exec<{ key: string; value: number }>("SELECT key, value FROM quota").toArray().map((r) => [r.key, r.value]));
+  }
+
+  async getQuota(keys: string[]): Promise<Record<string, number>> {
+    const rows = this.ctx.storage.sql.exec<{ key: string; value: number }>(`SELECT key, value FROM quota WHERE key IN (${keys.map(() => "?").join(",")})`, ...keys).toArray();
+    return Object.fromEntries(rows.map((r) => [r.key, r.value]));
   }
 
   async usageByModel(sinceMs: number): Promise<{ model: string; usd: number; calls: number }[]> {

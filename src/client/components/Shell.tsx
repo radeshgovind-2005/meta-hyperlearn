@@ -41,6 +41,7 @@ export function Shell({ children, commandBar = true, wide = false }: { children:
         </div>
       </nav>
       <main className="page" style={wide ? { paddingRight: 32 } : undefined}>
+        <LimitBanner />
         {children}
         {commandBar && <CommandBar />}
       </main>
@@ -102,5 +103,20 @@ export function Spinner({ label }: { label?: string }) {
       <span className="spinner" />
       {label && <span className="small muted">{label}</span>}
     </span>
+  );
+}
+
+/** Shown app-wide when HyperLearn has used its free hosting allowance. */
+export function LimitBanner() {
+  const { me } = useApp();
+  const l = me?.limits;
+  if (!l?.uploadsBlocked) return null;
+  return (
+    <div className="callout callout-warn" role="status">
+      <strong style={{ fontSize: 14 }}>New uploads are paused</strong>
+      <p className="small">
+        HyperLearn has reached its free {l.uploadsBlocked} limit. Your courses still work. To add more material, contact <a href={`mailto:${l.contact}`}>{l.contact}</a>.
+      </p>
+    </div>
   );
 }
