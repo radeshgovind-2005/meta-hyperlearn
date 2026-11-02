@@ -6,6 +6,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { Client } from "langsmith";
 import { evaluate } from "langsmith/evaluation";
+import { RunTree } from "langsmith/run_trees";
 
 const remote = process.argv.includes("--remote");
 const BASE = process.env.SEED_BASE ?? (remote ? "https://hyperlearn.radesh-govind.com" : "http://localhost:5173");
@@ -63,12 +64,9 @@ for (const src of outline.sources) {
   for (const ch of d.chunks) chunkText.set(ch.id, ch.text);
 }
 
-// dataset: 18 requests spread over the course's paragraphs
+// 18 requests spread over the course's paragraphs
 const examples = REQUESTS.map((request, i) => ({ request, ...targets[(i * 7) % targets.length] }));
-const existing = await client.hasDataset({ datasetName: DATASET });
-const ds = existing ? await client.readDataset({ datasetName: DATASET }) : await client.createDataset(DATASET, { description: "Real 'change anything' requests on the HyperLearn demo course" });
-if (!existing) await client.createExamples({ datasetId: ds.id, inputs: examples.map((e) => ({ courseId: course.id, sectionId: e.sectionId, blockId: e.blockId, request: e.request, paragraph: e.md })) });
-
+const inputsOf = (e) => ({ courseId: course.id, sectionId: e.sectionId, blockId: e.blockId, request: e.request, paragraph: e.md });
 async function judge(sentence, evidence) {
   const res = await fetch(`${vars.META_BASE_URL}/chat/completions`, {
     method: "POST",
@@ -109,16 +107,60 @@ const faithfulness = async ({ outputs }) => {
   return { key: "citation_faithfulness", score: total ? ok / total : null, comment: `${ok}/${total} sentences supported` };
 };
 
-const results = await evaluate(target, { data: DATASET, evaluators: [faithfulness], experimentPrefix: "mutate-verify-loop", maxConcurrency: 2, client });
 let sum = 0;
 let n = 0;
-for await (const r of results) {
-  const s = r.evaluationResults.results[0]?.score;
-  if (typeof s === "number") {
-    sum += s;
-    n++;
+let supported = 0;
+let total = 0;
+let experiment;
+const rows = [];
+try {
+  // full LangSmith keys: dataset + experiment
+  const existing = await client.hasDataset({ datasetName: DATASET });
+  const ds = existing ? await client.readDataset({ datasetName: DATASET }) : await client.createDataset(DATASET, { description: "Real 'change anything' requests on the HyperLearn demo course" });
+  if (!existing) await client.createExamples({ datasetId: ds.id, inputs: examples.map(inputsOf) });
+  const results = await evaluate(target, { data: DATASET, evaluators: [faithfulness], experimentPrefix: "mutate-verify-loop", maxConcurrency: 2, client });
+  experiment = results.experimentName;
+  for await (const r of results) {
+    const s = r.evaluationResults.results[0]?.score;
+    if (typeof s === "number") {
+      sum += s;
+      n++;
+    }
   }
+} catch (err) {
+  if (!/403|not allowed/i.test(String(err))) throw err;
+  // tracing-only keys: run the same eval here and log each scored run as a LangSmith trace
+  console.log("LangSmith key is tracing-only; logging eval runs as traces in project hyperlearn-eval");
+  experiment = `hyperlearn-eval traces ${new Date().toISOString().slice(0, 16)}`;
+  for (const [i, e] of examples.entries()) {
+    const inputs = inputsOf(e);
+    const rt = new RunTree({ name: "mutate-eval", run_type: "chain", inputs, project_name: "hyperlearn-eval", client, metadata: { example: i } });
+    await rt.postRun();
+    let outputs;
+    let res;
+    try {
+      outputs = await target(inputs);
+      res = await faithfulness({ outputs });
+    } catch (err2) {
+      outputs = { error: String(err2) };
+      res = { score: null, comment: String(err2).slice(0, 200) };
+    }
+    await rt.end({ ...outputs, citation_faithfulness: res.score, comment: res.comment });
+    await rt.patchRun();
+    const m = /(\d+)\/(\d+)/.exec(res.comment ?? "");
+    if (m) {
+      supported += Number(m[1]);
+      total += Number(m[2]);
+    }
+    if (typeof res.score === "number") {
+      sum += res.score;
+      n++;
+    }
+    rows.push({ request: e.request, section: e.title, score: res.score, comment: res.comment, summary: outputs.summary });
+    console.log(`${i + 1}/${examples.length} ${e.request} → ${res.comment}`);
+  }
+  await client.awaitPendingTraceBatches?.();
 }
 const score = n ? sum / n : 0;
-console.log(`citation faithfulness: ${(score * 100).toFixed(1)}% over ${n} mutations`);
-writeFileSync("eval-result.json", JSON.stringify({ score, n, experiment: results.experimentName, at: new Date().toISOString() }, null, 2));
+console.log(`citation faithfulness: ${(score * 100).toFixed(1)}% mean over ${n} mutations${total ? ` (${supported}/${total} sentences)` : ""}`);
+writeFileSync("eval-result.json", JSON.stringify({ score, n, supported, total, experiment, rows, at: new Date().toISOString() }, null, 2));
