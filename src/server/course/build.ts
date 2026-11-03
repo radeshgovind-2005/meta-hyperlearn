@@ -6,7 +6,8 @@ import { MODELS } from "../ai/models";
 import type { Block, Cite } from "../../shared/types";
 import { chunkToCite, chunksForPages, formatChunksForPrompt, getChunks, searchChunks, type ChunkRow } from "../lib/chunks";
 import { randomId } from "../lib/crypto";
-import { verifySentenceBatch, splitSentences } from "../verify/sentences";
+import { verifySentenceBatch, splitSentences, dropSentences } from "../verify/sentences";
+import { normalizeMath } from "../../shared/mathtext";
 import type { ExamStyle } from "../ingest/pipeline";
 
 // buildCourseGraph nodes: outline → sections as blocks → exam-style exercises → verify → commit v1.
@@ -110,6 +111,13 @@ export async function gatherSectionChunks(env: Env, sources: SourceInfo[], pages
   return [...direct, ...related.filter((c) => !seen.has(c.id))];
 }
 
+/** How formulas are written, shared by the course writer and the rewrite writer. */
+export const MATH_RULES = [
+  "Math is typeset with LaTeX. Inline symbols go in $...$, for example $T_p$ or $\\lambda$.",
+  "When a paragraph states a formula, give it its own line as $$...$$ (one line, no line breaks inside), written as a real fraction with \\frac{}{}, subscripts T_1 and powers x^2, then a line 'where:' and one line per symbol in the form '- $T_1$ is the execution time on one processor'. Say what every symbol in the formula is, using the source's words.",
+  "Keep the sentence that introduces the formula before it. Put each of these parts on its own line inside the same text block, separated by newlines.",
+].join(" ");
+
 export async function writeSection(
   env: Env,
   ctx: AiCtx,
@@ -130,8 +138,8 @@ export async function writeSection(
         content: [
           "You write one section of a course for a student, using only their material.",
           "Rules: prefer the source's own wording; copy it (verbatim=true) when it already reads well as prose, rephrase only when slide fragments must become sentences.",
-          "Every text block is one paragraph and must cite the chunk ids it uses. Never state anything the chunks don't support. No filler, no emoji, plain and direct.",
-          "Use $...$ for inline math only when needed; prefer plain notation like Av = λv.",
+          "Every text block is one idea (one paragraph, or a sentence with its formula and symbol legend) and must cite the chunk ids it uses. Never state anything the chunks don't support. No filler, no emoji, plain and direct.",
+          MATH_RULES,
           DATA_RULE,
         ].join(" "),
       },
@@ -155,13 +163,13 @@ export async function writeSection(
     const cites: Cite[] = b.chunkIds.filter((id) => valid.has(id)).map((id) => chunkToCite(valid.get(id)!));
     if (b.kind === "text") {
       if (!cites.length || !b.md.trim()) continue;
-      blocks.push({ id: randomId("b"), kind: "text", md: b.md.trim(), cites, origin: b.verbatim ? "source" : "rephrased" });
+      blocks.push({ id: randomId("b"), kind: "text", md: normalizeMath(b.md), cites, origin: b.verbatim ? "source" : "rephrased" });
     } else {
       blocks.push({
         id: randomId("b"),
         kind: "exercise",
-        prompt: b.md.trim(),
-        answer: b.answer.trim(),
+        prompt: normalizeMath(b.md),
+        answer: normalizeMath(b.answer),
         cites,
         ...(args.examSourceId ? { styleOf: args.examSourceId } : {}),
       });
@@ -194,7 +202,7 @@ export async function verifyBlocks(env: Env, ctx: AiCtx, blocks: Block[]): Promi
     supported += ok.length;
     for (const c of r.checks.filter((c) => !c.supported)) problems.push(`"${c.sentence}" — ${c.reason}`);
     if (ok.length === r.checks.length) out.push(b);
-    else if (ok.length && b.kind === "text") out.push({ ...b, md: ok.map((c) => c.sentence).join(" ") });
+    else if (ok.length && b.kind === "text") out.push({ ...b, md: dropSentences(b.md, new Set(r.checks.filter((c) => !c.supported).map((c) => c.sentence))) });
   });
   return { blocks: out, problems, checked, supported, verifier };
 }

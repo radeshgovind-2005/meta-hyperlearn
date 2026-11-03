@@ -17,7 +17,9 @@ import { renderAndJudge, type RenderCheck } from "../verify/widgetRender";
 import { commitSection } from "../lib/blocks";
 import { recordRunTrace } from "../lib/runs";
 import { adjustMastery, getMastery } from "../lib/mastery";
-import { fmtTime } from "../course/build";
+import { fmtTime, MATH_RULES } from "../course/build";
+import { dropSentences } from "../verify/sentences";
+import { hasFormula, normalizeMath } from "../../shared/mathtext";
 import { illustrationsEnabled, makeIllustration } from "../course/illustrate";
 import type { FigureBlock } from "../../shared/hero";
 
@@ -47,7 +49,7 @@ const TextOutSchema = z.object({
   paragraphs: z.array(z.object({ md: z.string(), chunkIds: z.array(z.string()) })),
 });
 
-const WidgetChoiceSchema = z.object({
+export const WidgetChoiceSchema = z.object({
   template: z.enum(["vector2d", "plot", "stepper", "custom"]),
   title: z.string().describe("short imperative title, e.g. 'Try it: turn v until A stops turning it'"),
   paramsJson: z.string().describe("JSON string of the template params"),
@@ -127,6 +129,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
     });
     // a widget request on a non-text block still needs text left alone
     applyPictureHints(intent, s.request, selected(s)?.kind);
+    applyMathDefaults(intent, s.before.blocks, s.blockId);
     if (!intent.rewrite && !intent.addWidget && !intent.moreExamples && !intent.addImage) intent.rewrite = true;
     await trace(s, `Read the request as: ${describeIntent(intent)}`, MODELS.spark);
     step(s, 0, "done", describeIntent(intent));
@@ -188,6 +191,8 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
           content: [
             "You rewrite one paragraph of a student's course on request. Use only facts from the chunks; every paragraph cites the chunk ids it uses.",
             "Write plainly, short sentences, no filler, no emoji. Keep notation consistent with the original.",
+            MATH_RULES,
+            "A paragraph that states a formula keeps it: the formula on its own line, then the 'where:' legend. A paragraph without a formula stays prose.",
             intent.simplify || intent.tooComplex ? `Make it simpler for a student at ${Math.round(s.mastery * 100)}% mastery: everyday words first, one idea per sentence, define symbols before using them.` : "",
             intent.analogy ? "Include one short analogy, clearly marked as an analogy (e.g. 'Think of ...')." : "",
             "If the student asks for a table or a comparison, write it as a markdown table (header row, |---| separator row, one row per line) using only facts from the chunks.",
@@ -214,7 +219,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
       .map((p, k) => {
         let cites: Cite[] = p.chunkIds.filter((id) => byId.has(id)).map((id) => chunkToCite(byId.get(id)!));
         if (!cites.length) cites = block.cites; // keep the original citations
-        return { id: k === 0 ? block.id : randomId("b"), kind: "text", md: p.md.trim(), cites, origin: "rephrased" };
+        return { id: k === 0 ? block.id : randomId("b"), kind: "text", md: normalizeMath(p.md), cites, origin: "rephrased" };
       });
     await trace(s, `Rewrote the paragraph${textBlocks.length > 1 ? ` as ${textBlocks.length} paragraphs` : ""}`, MODELS.spark);
     step(s, 2, "done");
@@ -266,14 +271,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
       messages: [
         {
           role: "system",
-          content: [
-            "You design one small interactive example for a course paragraph. Pick a template and fill its params. Use a template only when it truly fits: vector2d for a 2x2 matrix acting on vectors (eigenvectors, transformations), plot for a function you can drag along (e.g. a polynomial with its roots), stepper for worked procedures. For anything else (physical systems, architecture, processes, comparisons, diagrams, anything you would sketch on a whiteboard) choose 'custom': a small self-contained interactive page with inline SVG or HTML (clickable steps, toggles, hover details), and leave paramsJson as '{}' and claims empty. Never force an idea into a template that does not fit it. Never produce a picture: pictures are only made when the student explicitly asks for one.",
-            `Templates:\n${TEMPLATE_DOCS}`,
-            "Claims are mathjs boolean expressions over the params that state the facts the widget teaches; they are recomputed in code. For vector2d, A is available as a matrix (e.g. 'A * [1, 1] == 3 * [1, 1]', 'det(A) == 3'). For plot, f(x) is the plotted function with slider values (e.g. 'f(2) == 0'). Give 2–4 claims.",
-            "Numbers must come from the chunks when they give an example; otherwise choose small integers.",
-            "The student must be able to DO what the title says. If the title says 'push the frequency', frequency is x (the probe the student drags along the curve) or a slider. Every slider must appear in expr. Give it a goal the student can reach by moving the controls, and name the axes with units.",
-            DATA_RULE,
-          ].join("\n"),
+          content: WIDGET_RULES,
         },
         {
           role: "user",
@@ -359,7 +357,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
       const bad = new Set(s.verification.sentences.filter((c) => !c.supported).map((c) => c.sentence));
       if (bad.size) {
         textBlocks = textBlocks
-          .map((tb) => ({ ...tb, md: tb.md.split(/(?<=[.!?])\s+/).filter((sent) => !bad.has(sent.trim())).join(" ") }))
+          .map((tb) => ({ ...tb, md: dropSentences(tb.md, bad) }))
           .filter((tb) => tb.md.trim());
         summary.push(`Removed ${bad.size} sentence${bad.size === 1 ? "" : "s"} that did not match the sources`);
       }
@@ -450,14 +448,25 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
     .compile({ checkpointer });
 }
 
-const TEMPLATE_DOCS = `
+export const TEMPLATE_DOCS = `
 - vector2d: a 2x2 matrix acting on a vector the student turns with a slider. params: {"A": [[a,b],[c,d]], "mode": "eigen" | "transform", "startAngle": degrees, "caption": "one line explaining what to look for"}. In eigen mode the widget says when v and Av lie on the same line and shows λ.
 - vector2d also takes "goal": the task in eigen mode (default: find both eigen-directions). The student drags v; the widget counts the directions found.
 - plot: y = f(x). The student drags a probe along x and reads y live; sliders change parameters. Axes stay fixed over all slider values, so the curve visibly moves. params: {"expr": "k*x^3", "xMin": 0, "xMax": 5, "xLabel": "frequency (GHz)", "yLabel": "power (W)", "xStart": 1, "sliders": [{"name":"k","label":"chip constant","min":1,"max":4,"step":0.5,"value":2}], "markers": [{"x": 1, "label": "root"}], "goal": {"check": "f(x) >= 200", "text": "Push the frequency until power passes 200 W", "done": "Past 200 W: doubling f multiplied power by 8."}, "caption": "..."}. goal.check is a mathjs boolean over x, f and the slider names, and must be reachable.
 - stepper: a worked example revealed one step at a time. params: {"steps": [{"title": "Step 1", "md": "..."}]} (3–6 steps).
 - custom: a self-contained HTML document (inline CSS/JS only, no network) with paramsJson = {"html": "<!doctype html>..."}.`;
 
-async function toWidgetSpec(ctx: AiCtx, choice: z.infer<typeof WidgetChoiceSchema>, request: string, paragraph: string): Promise<WidgetSpec> {
+/** What the widget designer is told, shared by the mutate graph and the course builder. */
+export const WIDGET_RULES = [
+  "You design one small interactive example for a course paragraph. Pick a template and fill its params. Use a template only when it truly fits: vector2d for a 2x2 matrix acting on vectors (eigenvectors, transformations), plot for a function you can drag along (e.g. a polynomial with its roots), stepper for worked procedures. For anything else (physical systems, architecture, processes, comparisons, diagrams, anything you would sketch on a whiteboard) choose 'custom': a small self-contained interactive page with inline SVG or HTML (clickable steps, toggles, hover details), and leave paramsJson as '{}' and claims empty. Never force an idea into a template that does not fit it. Never produce a picture: pictures are only made when the student explicitly asks for one.",
+  `Templates:\n${TEMPLATE_DOCS}`,
+  "Claims are mathjs boolean expressions over the params that state the facts the widget teaches; they are recomputed in code. For vector2d, A is available as a matrix (e.g. 'A * [1, 1] == 3 * [1, 1]', 'det(A) == 3'). For plot, f(x) is the plotted function with slider values (e.g. 'f(2) == 0'). Give 2–4 claims.",
+  "Numbers must come from the chunks when they give an example; otherwise choose small integers.",
+  "When the paragraph states a formula, the example lets the student change the formula's variables and watch the result move: use plot with one slider per free variable (x is the main variable), put the formula in expr, and set a goal that makes the formula's meaning visible (for example reaching a speedup). The title says what to try.",
+  "The student must be able to DO what the title says. If the title says 'push the frequency', frequency is x (the probe the student drags along the curve) or a slider. Every slider must appear in expr. Give it a goal the student can reach by moving the controls, and name the axes with units.",
+  DATA_RULE,
+].join("\n");
+
+export async function toWidgetSpec(ctx: AiCtx, choice: z.infer<typeof WidgetChoiceSchema>, request: string, paragraph: string): Promise<WidgetSpec> {
   let params: Record<string, unknown>;
   try {
     params = JSON.parse(choice.paramsJson);
@@ -506,6 +515,20 @@ export function applyPictureHints(intent: Intent, request: string, kind: Block["
   } else {
     intent.addImage = false; // the classifier alone never triggers an image
   }
+  return intent;
+}
+
+/**
+ * Mathematical text gets an interactive example by default, unless the next block already is one.
+ * Only changes that rewrite the words trigger it; a table or a picture request does not.
+ */
+export function applyMathDefaults(intent: Intent, blocks: Block[], blockId: string): Intent {
+  const at = blocks.findIndex((b) => b.id === blockId);
+  const b = blocks[at];
+  if (!b || b.kind !== "text" || intent.addImage || intent.addWidget) return intent;
+  if (!(intent.rewrite || intent.simplify || intent.tooComplex || intent.moreExamples || intent.examFocus)) return intent;
+  if (blocks[at + 1]?.kind === "widget" || !hasFormula(b.md)) return intent;
+  intent.addWidget = true;
   return intent;
 }
 

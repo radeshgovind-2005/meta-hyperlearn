@@ -315,3 +315,12 @@ ins { color: var(--success); background: #e7f6ed; text-decoration: none; }
 .md-table th, .md-table td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; color: var(--body); }
 .md-table thead th { background: var(--sidebar); color: var(--ink); font-weight: 600; }
 .md-table tbody th { color: var(--ink); font-weight: 600; background: transparent; }
+
+/* typeset math: formula on its own line, then what each symbol is */
+.math-display { display: block; margin: 14px 0 10px; padding: 14px 16px; background: var(--sidebar); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; overflow-y: hidden; text-align: center; }
+.math-display .katex-display { margin: 0; }
+.math-display .katex { font-size: 1.2em; color: var(--ink); }
+.math-inline .katex { font-size: 1.05em; }
+.md-legend { display: block; margin: 0 0 10px; padding-left: 14px; border-left: 3px solid var(--border); }
+.md-legend-row { display: block; font-size: 0.9em; line-height: 1.5; color: var(--body); padding: 2px 0; }
+.md-legend-row .katex { font-size: 1em; }

@@ -439,7 +439,7 @@ export function CoursePage() {
             return (
               <div key={`${b.id}-${i}`} className="block" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {b.kind === "text" ? (
-                  <p
+                  <div
                     className={`para${isSel ? " selected" : ""}${working ? " working" : ""}${changed(b.id) ? " changed" : ""}`}
                     style={listening === b.id ? { background: "var(--highlight)" } : undefined}
                     onClick={() => {
@@ -460,7 +460,7 @@ export function CoursePage() {
                         </button>
                       </span>
                     )}
-                  </p>
+                  </div>
                 ) : b.kind === "widget" ? (
                   <div className="block" onClick={() => setSelected(b.id)}>
                     <WidgetCard block={b} sources={sources} widgetsOrigin={config.widgetsOrigin} />

@@ -4,13 +4,14 @@ import type { AiCtx } from "../ai/meta";
 import { chatJson, safeParseJson, asData, DATA_RULE, toJsonSchema } from "../ai/meta";
 import { isOpenWeight, openChat, openModelLabel } from "../ai/openModel";
 import { MODELS } from "../ai/models";
+import { bulletText, displayMath } from "../../shared/mathtext";
 
 export type Verdict = { i: number; supported: boolean; reason: string };
 export type SentenceCheck = { sentence: string; supported: boolean; reason: string };
 
-/** Splits markdown prose into sentences, keeping math like "Av = λv." intact. */
-export function splitSentences(md: string): string[] {
-  const text = md.replace(/\s+/g, " ").trim();
+/** Splits one line of markdown prose into sentences, keeping math like "Av = λv." intact. */
+function lineSentences(line: string): string[] {
+  const text = line.replace(/\s+/g, " ").trim();
   if (!text) return [];
   const parts = text.match(/[^.!?]+(?:[.!?]+(?=\s+[A-Z(0-9"“$\\]|\s*$)|$)/g) ?? [text];
   const out: string[] = [];
@@ -22,6 +23,33 @@ export function splitSentences(md: string): string[] {
     else out.push(s);
   }
   return out;
+}
+
+/** What the verifier reads for one line: a display formula and a legend item are one unit each. */
+function lineUnits(line: string): { prefix: string; units: string[] } {
+  const bullet = bulletText(line);
+  if (displayMath(line) !== null) return { prefix: "", units: [line.trim()] };
+  return { prefix: bullet !== null ? "- " : "", units: lineSentences(bullet ?? line) };
+}
+
+/** Splits markdown into the sentences the verifier checks. Formulas and legend items are checked too. */
+export function splitSentences(md: string): string[] {
+  return md.split("\n").flatMap((l) => lineUnits(l).units);
+}
+
+/** Removes the given sentences and keeps the paragraph's lines, formulas and legend in shape. */
+export function dropSentences(md: string, bad: Set<string>): string {
+  return md
+    .split("\n")
+    .map((l) => {
+      const { prefix, units } = lineUnits(l);
+      const kept = units.filter((u) => !bad.has(u));
+      return kept.length ? prefix + kept.join(" ") : l.trim() ? null : "";
+    })
+    .filter((l): l is string => l !== null)
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 const VerdictsSchema = z.object({

@@ -7,6 +7,8 @@ import { activeBuild } from "../course/buildJobs";
 import { putBlocks } from "../lib/blocks";
 import { illustrationsEnabled, makeIllustration } from "../course/illustrate";
 import { withHero, type FigureBlock } from "../../shared/hero";
+import type { WidgetBlock } from "../../shared/types";
+import { makeInteractive, wantsInteractive, withInteractive } from "../course/interactive";
 import type { ExamStyle } from "../ingest/pipeline";
 import type { BuildParams } from "./buildCourse";
 
@@ -59,9 +61,22 @@ export class BuildSectionWorkflow extends WorkflowEntrypoint<Env, SectionBuildPa
             }
           })
         : "";
+      // best effort: math pages get an interactive example by default
+      const widgetJson = wantsInteractive(result.blocks)
+        ? await step.do("interact", MODEL_STEP, async () => {
+            try {
+              const made = await makeInteractive(env, await getAiCtx(env, userId), { title: section.title, blocks: result.blocks, chunks: args.chunks });
+              return made.block ? JSON.stringify(made.block) : "";
+            } catch (err) {
+              console.error("interactive example failed", (err as Error).message);
+              return "";
+            }
+          })
+        : "";
       await step.do("save", async () => {
         if (!(await activeBuild(env, courseId, runId))) return;
-        const blocks = heroJson ? withHero(result.blocks, JSON.parse(heroJson) as FigureBlock) : result.blocks;
+        const withWidget = widgetJson ? withInteractive(result.blocks, JSON.parse(widgetJson) as WidgetBlock) : result.blocks;
+        const blocks = heroJson ? withHero(withWidget, JSON.parse(heroJson) as FigureBlock) : withWidget;
         const hashes = await putBlocks(env, blocks);
         await env.DB.prepare("UPDATE section_build_jobs SET status = 'done', block_hashes = ?, checked = ?, supported = ?, verifier = ?, error = NULL, updated_at = ? WHERE attempt_id = ? AND section_id = ? AND status = 'running'").bind(JSON.stringify(hashes), result.checked, result.supported, result.verifier, Date.now(), runId, sectionId).run();
         await flushQuota(env);

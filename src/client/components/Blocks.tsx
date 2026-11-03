@@ -68,14 +68,14 @@ export function ExerciseCard({ block, styleName }: { block: Extract<Block, { kin
   return (
     <section className="exercise" aria-label="Exercise">
       <p className="label-caps">Try it{styleName ? ` · in the style of ${examLabel(styleName)}` : ""}</p>
-      <p className="q">
+      <div className="q">
         <Md text={stripQuestionNumber(block.prompt)} />
-      </p>
+      </div>
       <details>
         <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 500, color: "var(--primary)" }}>Show worked answer</summary>
-        <p className="serif" style={{ fontSize: 17, lineHeight: 1.55, marginTop: 8, color: "var(--body)" }}>
+        <div className="serif" style={{ fontSize: 17, lineHeight: 1.55, marginTop: 8, color: "var(--body)" }}>
           <Md text={block.answer} />
-        </p>
+        </div>
       </details>
     </section>
   );
