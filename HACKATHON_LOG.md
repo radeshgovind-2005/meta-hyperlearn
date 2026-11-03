@@ -31,3 +31,4 @@ All work below was built during the Meta Global AI Developer Hackathon (deadline
 2026-11-03 fix(mutate): Muse Image only on explicit picture requests; tables and examples never trigger it; markdown tables render in the reader
 - 2026-11-03: typeset math with KaTeX (own-line formulas, symbol legend), default interactive example for math pages
 - 2026-11-03: upgraded the 8 demo-course pages to typeset math with symbol legends and interactive examples (versions 10–25)
+- 2026-11-03: Listen audio is pre-generated: MeloTTS (open weights, Workers AI) makes the clips on every page change and stores them in R2 by content, so Listen starts at once; Kokoro and its 330 MB browser download removed; demo course backfilled
