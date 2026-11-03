@@ -7,6 +7,7 @@ export const MODELS = {
   transcribe: "muse-voice-transcribe-1.0",
   image: "muse-image-1.0",
   embed: "@cf/baai/bge-base-en-v1.5", // Workers AI: the Meta API has no embeddings endpoint
+  tts: "@cf/myshell-ai/melotts", // Workers AI (open weights): the Meta API has no text-to-speech model
 } as const;
 
 export const MODEL_LABELS: Record<string, string> = {

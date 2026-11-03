@@ -20,6 +20,7 @@ import { adjustMastery, getMastery } from "../lib/mastery";
 import { fmtTime, MATH_RULES } from "../course/build";
 import { dropSentences } from "../verify/sentences";
 import { hasFormula, normalizeMath } from "../../shared/mathtext";
+import { warmNarration, type Defer } from "../course/narrate";
 import { illustrationsEnabled, makeIllustration } from "../course/illustrate";
 import type { FigureBlock } from "../../shared/hero";
 
@@ -62,6 +63,8 @@ export type MutateDeps = {
   ctx: AiCtx;
   emit: (e: RunEvent) => void;
   sources: Map<string, { filename: string; kind: string }>;
+  /** Runs background work after the run (the spoken version of a saved change). */
+  defer?: Defer;
 };
 
 type Verification = { sentences: SentenceCheck[]; claims: ClaimResult[]; render: RenderCheck | null; verifier: string };
@@ -422,6 +425,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
     });
     await trace(s, res.overlay ? "Saved as your own change on top of the shared course" : `Saved as version ${res.courseVersion}`);
     emit({ type: "run.done", runId: s.runId, status: "kept", courseVersion: res.courseVersion ?? undefined, message: res.overlay ? "Saved for you. The course owner's version is unchanged." : `Saved as version ${res.courseVersion}.` });
+    deps.defer?.(warmNarration(env, s.userId, s.after!.title, s.after!.blocks));
     return { courseVersion: res.courseVersion };
   }
 

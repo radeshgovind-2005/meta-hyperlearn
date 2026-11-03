@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { listenScript } from "../course/listen";
+import { prepareNarration, warmNarration, type NarratedSegment } from "../course/narrate";
 import type { AppEnv, Env } from "../env";
 import type { Block, Section } from "../../shared/types";
 import { BlockSchema } from "../../shared/types";
@@ -15,6 +15,17 @@ import { assertQuota } from "../lib/quota";
 import { chunkToCite, searchChunks, type ChunkRow } from "../lib/chunks";
 import { illustrationsEnabled, makeIllustration } from "../course/illustrate";
 import { canIllustrate, heroOf, withHero } from "../../shared/hero";
+
+/** A narrated section as the reader plays it: each clip is a signed link, or null when the browser voice has to cover it. */
+export async function narrationPayload(env: Env, segments: NarratedSegment[]) {
+  return Promise.all(
+    segments.map(async (s) => ({
+      blockId: s.blockId,
+      text: s.text,
+      clips: await Promise.all(s.clips.map(async (cl) => ({ text: cl.text, url: cl.key ? await signFileUrl(env, cl.key) : null }))),
+    })),
+  );
+}
 
 export async function sourcesPayload(env: Env, blocks: Block[], courseId: string) {
   const ids = new Set<string>();
@@ -171,6 +182,7 @@ export const courses = new Hono<AppEnv>()
         kind: "illustrate",
         summary: `${section.title}: added a picture drawn by Muse Image`,
       });
+      c.executionCtx.waitUntil(warmNarration(c.env, userId, section.title, withHero(section.blocks, made.block)));
       return c.json({ added: true });
     } catch (err) {
       return errorResponse(c, err);
@@ -206,6 +218,7 @@ export const courses = new Hono<AppEnv>()
     const summary = body.undo ? `Undid the last change to ${body.title}` : `Edited ${body.title}`;
     const res = await commitSection(c.env, { courseId: access.course.id, sectionId: c.req.param("sid"), title: body.title, blocks, userId, kind: body.undo ? "undo" : "edit", summary });
     if (res.courseVersion) await c.env.COURSE_DO.get(c.env.COURSE_DO.idFromName(access.course.id)).notifyVersion(access.course.id, res.courseVersion, summary);
+    c.executionCtx.waitUntil(warmNarration(c.env, userId, body.title, blocks));
     return c.json(res);
   })
   .get("/:id/history", async (c) => {
@@ -232,14 +245,15 @@ export const courses = new Hono<AppEnv>()
     });
   })
   .post("/:id/sections/:sectionId/listen", async (c) => {
-    // a spoken script for Listen mode, written by Muse Spark and read by the browser voice
+    // a spoken script for Listen mode, written by Muse Spark, with its audio (made when the section last changed)
     const userId = c.get("userId");
     const access = await courseAccess(c.env, c.req.param("id"), userId);
     if (!access) return c.json({ error: "Not found" }, 404);
     try {
       const section = await loadSection(c.env, access.course.id, c.req.param("sectionId"), { userId });
       const ctx = await getAiCtx(c.env, userId);
-      return c.json(await listenScript(c.env, ctx, section.title, section.blocks));
+      const { segments, cached } = await prepareNarration(c.env, ctx, section.title, section.blocks);
+      return c.json({ cached, segments: await narrationPayload(c.env, segments) });
     } catch (err) {
       return errorResponse(c, err);
     }

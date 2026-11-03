@@ -2,6 +2,9 @@ import { Hono } from "hono";
 import type { AppEnv } from "../env";
 import { getAiCtx, recordSpend } from "../ai/meta";
 import { MODELS, PRICES } from "../ai/models";
+import { z } from "zod";
+import { narrate } from "../course/narrate";
+import { narrationPayload } from "./courses";
 
 /**
  * Realtime mic input for the command bar. The browser streams PCM16 16 kHz frames to us;
@@ -78,4 +81,11 @@ export const voice = new Hono<AppEnv>().get("/realtime", async (c) => {
     const t = setInterval(() => { if (closed) { clearInterval(t); resolve(); } }, 1000);
   }));
   return new Response(null, { status: 101, webSocket: pair[0] });
+});
+
+/** A spoken answer (command bar): the same voice as Listen, stored by content so repeats are free. */
+voice.post("/speak", async (c) => {
+  const { text } = z.object({ text: z.string().min(1).max(3500) }).parse(await c.req.json());
+  const [segment] = await narrationPayload(c.env, await narrate(c.env, [{ blockId: "", text }]));
+  return c.json({ clips: segment?.clips ?? [] });
 });

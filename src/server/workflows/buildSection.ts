@@ -8,6 +8,7 @@ import { putBlocks } from "../lib/blocks";
 import { illustrationsEnabled, makeIllustration } from "../course/illustrate";
 import { withHero, type FigureBlock } from "../../shared/hero";
 import type { WidgetBlock } from "../../shared/types";
+import { warmNarration } from "../course/narrate";
 import { makeInteractive, wantsInteractive, withInteractive } from "../course/interactive";
 import type { ExamStyle } from "../ingest/pipeline";
 import type { BuildParams } from "./buildCourse";
@@ -79,6 +80,12 @@ export class BuildSectionWorkflow extends WorkflowEntrypoint<Env, SectionBuildPa
         const blocks = heroJson ? withHero(withWidget, JSON.parse(heroJson) as FigureBlock) : withWidget;
         const hashes = await putBlocks(env, blocks);
         await env.DB.prepare("UPDATE section_build_jobs SET status = 'done', block_hashes = ?, checked = ?, supported = ?, verifier = ?, error = NULL, updated_at = ? WHERE attempt_id = ? AND section_id = ? AND status = 'running'").bind(JSON.stringify(hashes), result.checked, result.supported, result.verifier, Date.now(), runId, sectionId).run();
+        await flushQuota(env);
+      });
+      // best effort: the spoken version is made now, so Listen starts at once
+      await step.do("narrate", MODEL_STEP, async () => {
+        const withWidget = widgetJson ? withInteractive(result.blocks, JSON.parse(widgetJson) as WidgetBlock) : result.blocks;
+        await warmNarration(env, userId, section.title, heroJson ? withHero(withWidget, JSON.parse(heroJson) as FigureBlock) : withWidget);
         await flushQuota(env);
       });
       return { sectionId };

@@ -157,8 +157,8 @@ export class CourseDO extends DurableObject<Env> {
     try {
       const compiled =
         graph === "mutate"
-          ? buildMutateGraph({ env: this.env, ctx, emit, sources: await this.sourcesFor((input as MutateInput).courseId ?? (await this.courseIdOf(runId))) }, this.saver)
-          : buildAdaptGraph({ env: this.env, ctx, emit }, this.saver);
+          ? buildMutateGraph({ env: this.env, ctx, emit, sources: await this.sourcesFor((input as MutateInput).courseId ?? (await this.courseIdOf(runId))), defer: (p) => this.ctx.waitUntil(p) }, this.saver)
+          : buildAdaptGraph({ env: this.env, ctx, emit, defer: (p) => this.ctx.waitUntil(p) }, this.saver);
       const result = (await compiled.invoke(input as never, config)) as { __interrupt__?: unknown[]; decision?: string };
       if (result.__interrupt__?.length) status = "waiting";
       else status = result.decision === "keep" ? "kept" : result.decision === "undo" ? "undone" : "done";

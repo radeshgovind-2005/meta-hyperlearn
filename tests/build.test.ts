@@ -54,7 +54,7 @@ beforeEach(async () => {
   await bindings.DB.prepare("INSERT INTO chunks (id, source_id, ord, text, page) VALUES ('chunk', 'source', 1, 'Parallel tasks run concurrently.', 1)").run();
   calls = 0; childCalls = []; childParams = [];
   appEnv = {
-    ...bindings, ILLUSTRATIONS: "off", META_API_KEY: "test", META_BASE_URL: "https://model.invalid/v1", DEMO_SPEND_CAP_USD: "40",
+    ...bindings, ILLUSTRATIONS: "off", NARRATION: "off", META_API_KEY: "test", META_BASE_URL: "https://model.invalid/v1", DEMO_SPEND_CAP_USD: "40",
     USER_DO: { idFromName: () => "id", get: () => ({ getSpend: async () => 0, addSpend: async () => {}, addQuota: async () => ({}) }) },
     BUILD_SECTION: { create: async ({ params: p }: { params: SectionBuildParams }) => {
       childParams.push(p);

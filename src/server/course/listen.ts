@@ -18,17 +18,18 @@ function readable(b: Block): string | null {
   return null;
 }
 
-async function sha256(text: string): Promise<string> {
+export async function sha256(text: string): Promise<string> {
   const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(d)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
 /**
- * Muse Spark turns a section into a script for the browser's speech voice: maths read the
+ * Muse Spark turns a section into a script for a text-to-speech voice: maths read the
  * way a lecturer says it, figures and examples described, no markdown. Cached per content.
  */
 export async function listenScript(env: Env, ctx: AiCtx, title: string, blocks: Block[]): Promise<{ segments: ListenSegment[]; cached: boolean }> {
   const items = blocks.map((b) => ({ id: b.id, text: readable(b) })).filter((x): x is { id: string; text: string } => Boolean(x.text));
+  if (!items.length) return { segments: [], cached: true };
   const key = `listen/${await sha256(JSON.stringify({ title, items }))}.json`;
   const hit = await env.FILES.get(key);
   if (hit) return { segments: JSON.parse(await hit.text()) as ListenSegment[], cached: true };

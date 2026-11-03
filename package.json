@@ -31,7 +31,6 @@
     "@langchain/langgraph-checkpoint": "1.2.2",
     "hono": "4.13.16",
     "katex": "0.16.22",
-    "kokoro-js": "^1.2.1",
     "langsmith": "0.11.7",
     "mathjs": "15.2.0",
     "pdfjs-dist": "6.5.438",

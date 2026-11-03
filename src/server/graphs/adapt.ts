@@ -13,6 +13,7 @@ import { recordRunTrace } from "../lib/runs";
 import { allMastery } from "../lib/mastery";
 import { loadSourcesFor, verifyBlocks, writeSection } from "../course/build";
 import { pathWithTitles } from "../course/practice";
+import { warmNarration, type Defer } from "../course/narrate";
 import { searchChunks } from "../lib/chunks";
 
 export const ADAPT_STEPS = ["Graded against the exam's marking pattern", "Diagnosed the mistake", "Re-planned the next sections", "Wrote the review from your sources", "Checked every sentence against its source"];
@@ -31,7 +32,7 @@ const ReplanSchema = z.object({
   message: z.string().describe("2 sentences to the student: what was right, what was the problem, what changed in their course"),
 });
 
-export type AdaptDeps = { env: Env; ctx: AiCtx; emit: (e: RunEvent) => void };
+export type AdaptDeps = { env: Env; ctx: AiCtx; emit: (e: RunEvent) => void; defer?: Defer };
 
 const AdaptState = Annotation.Root({
   runId: Annotation<string>(),
@@ -216,6 +217,7 @@ ${DATA_RULE}`,
     }
     await trace(s, courseVersion ? `Saved as version ${courseVersion}` : "Saved to your own path of this course");
     emit({ type: "run.done", runId: s.runId, status: "kept", courseVersion, message: summary });
+    for (const ns of s.newSections) deps.defer?.(getBlocks(env, ns.hashes).then((blocks) => warmNarration(env, s.userId, ns.title, blocks)));
     return {};
   }
 
