@@ -60,6 +60,7 @@ Eval: 82/88 rewritten sentences supported (93.2%), 18 requests.
 - Final Playwright pass on production: all 18 sections returned readable content, at most six text blocks and one exercise each; 83 teaching blocks and 248 citation links checked. Clicking a citation opened the source pane with the correct page and highlighted region. Temporary verification sessions revoked. Screenshots in ignored `test-results/production-outline.png` and `test-results/production-citation.png`.
 
 ## README film and repository check (2026-11-03)
+- Replaced the film thumbnail target and file-link row with the supplied YouTube links, including the vertical Short; removed the duplicate video row. Documentation diff checked.
 - Added both supplied YouTube video links near the top of the README; checked the documentation diff.
 - Added the 30-second ad near the top of the README with a clickable thumbnail, vertical version, captions and source/credits links. Committed the video source, input assets and finished deliveries; excluded local renders, recording frames, API caches and the Python environment.
 - Verified app and film typechecks, lint (one existing hook dependency warning), all 103 Workers tests, MP4 format/duration and a secret scan of newly added files. Documentation/video only; existing deployment unchanged.

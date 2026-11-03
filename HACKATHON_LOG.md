@@ -35,3 +35,4 @@ All work below was built during the Meta Global AI Developer Hackathon (deadline
 
 - 2026-11-03: Added the finished 30-second promotional film, vertical and clean versions, captions, production source and assets to git; linked the film with a thumbnail from the README. Typechecks, lint and 103 Workers tests pass.
 - 2026-11-03: Added both published YouTube video links near the top of the README.
+- 2026-11-03: Replaced README video file links with YouTube destinations and added the vertical Short.
