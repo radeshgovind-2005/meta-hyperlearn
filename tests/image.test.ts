@@ -165,4 +165,14 @@ describe("picture requests", () => {
     expect(applyPictureHints({ ...base, simplify: true }, "This is too complex. Simplify it.", "text").addImage).toBe(false);
     expect(applyPictureHints({ ...base, addWidget: true }, "Give me an interactive example with a picture", "text")).toMatchObject({ addWidget: true, addImage: false });
   });
+
+  it("never draws for tables, examples or diagrams, even when the classifier says so", () => {
+    for (const request of ["Make a table example of this", "Give me an example", "Give me an interactive diagram", "Compare these in a table"]) {
+      expect(applyPictureHints({ ...base, addImage: true, moreExamples: true }, request, "text").addImage).toBe(false);
+    }
+  });
+
+  it("still draws when the student asks for a picture", () => {
+    expect(applyPictureHints({ ...base }, "Show me a picture of this", "text").addImage).toBe(true);
+  });
 });

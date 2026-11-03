@@ -308,3 +308,10 @@ ins { color: var(--success); background: #e7f6ed; text-decoration: none; }
 .confidence { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--body); }
 .mutate-working { padding: 4px 2px; }
 .listen-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--sidebar); }
+
+/* ---- markdown tables inside course text ---- */
+.md-table-wrap { display: block; overflow-x: auto; margin: 12px 0; }
+.md-table { border-collapse: collapse; font-family: var(--font-ui, "Figtree", sans-serif); font-size: 14px; }
+.md-table th, .md-table td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; color: var(--body); }
+.md-table thead th { background: var(--sidebar); color: var(--ink); font-weight: 600; }
+.md-table tbody th { color: var(--ink); font-weight: 600; background: transparent; }

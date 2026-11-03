@@ -36,7 +36,7 @@ const IntentSchema = z.object({
   moreExamples: z.boolean().describe("only if the student explicitly asks for more or worked examples"),
   examFocus: z.boolean(),
   analogy: z.boolean(),
-  addImage: z.boolean().describe("the student asks for a picture, illustration, drawing or diagram, or wants a selected picture redrawn or changed"),
+  addImage: z.boolean().describe("true ONLY when the student explicitly asks for a picture, image, drawing or illustration, or wants a selected picture redrawn. Never for examples, tables, diagrams, widgets or interactive things"),
   tooComplex: z.boolean().describe("the student says it is too hard / confusing"),
   rewrite: z.boolean().describe("the selected text itself should be rewritten"),
   notes: z.string().describe("anything else the student asked for, in a few words"),
@@ -48,7 +48,7 @@ const TextOutSchema = z.object({
 });
 
 const WidgetChoiceSchema = z.object({
-  template: z.enum(["vector2d", "plot", "stepper", "custom", "illustration"]),
+  template: z.enum(["vector2d", "plot", "stepper", "custom"]),
   title: z.string().describe("short imperative title, e.g. 'Try it: turn v until A stops turning it'"),
   paramsJson: z.string().describe("JSON string of the template params"),
   claims: z.array(z.string()).describe("mathjs boolean expressions that must hold for the params, e.g. 'A * [1, 1] == 3 * [1, 1]'"),
@@ -121,7 +121,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
       reasoningEffort: "low",
       maxTokens: 400,
       messages: [
-        { role: "system", content: "Classify what a student wants changed about a part of their course. Output flags only. addImage is true when they ask to see a picture, illustration, drawing or diagram, or to redraw a selected picture." },
+        { role: "system", content: "Classify what a student wants changed about a part of their course. Output flags only. addImage is true ONLY when they explicitly ask for a picture, image, drawing or illustration, or to redraw a selected picture. A table, comparison, example, diagram or anything interactive is never addImage: a table or comparison is text (rewrite or moreExamples), an interactive thing is addWidget." },
         { role: "user", content: `Selected ${selected(s)?.kind ?? "block"}. Request: "${s.request}"` },
       ],
     });
@@ -162,7 +162,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
     const plan: string[] = [];
     if (b.kind === "text" && (i.rewrite || i.simplify || i.analogy || i.examFocus || i.moreExamples)) plan.push(`replace ${b.id}`);
     if (i.moreExamples) plan.push(`insertAfter ${b.id} (examples)`);
-    if (i.addWidget) plan.push(`insertAfter ${b.id} (interactive example, or an illustration when no template fits)`);
+    if (i.addWidget) plan.push(`insertAfter ${b.id} (interactive example)`);
     if (i.addImage && !i.addWidget) plan.push(b.kind === "figure" ? `replace ${b.id} (new picture)` : `insertAfter ${b.id} (illustration)`);
     await trace(s, `Planned the patch: ${plan.join("; ") || "no change"}. Other blocks stay untouched`);
     return {};
@@ -190,6 +190,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
             "Write plainly, short sentences, no filler, no emoji. Keep notation consistent with the original.",
             intent.simplify || intent.tooComplex ? `Make it simpler for a student at ${Math.round(s.mastery * 100)}% mastery: everyday words first, one idea per sentence, define symbols before using them.` : "",
             intent.analogy ? "Include one short analogy, clearly marked as an analogy (e.g. 'Think of ...')." : "",
+            "If the student asks for a table or a comparison, write it as a markdown table (header row, |---| separator row, one row per line) using only facts from the chunks.",
             intent.moreExamples ? "Add worked examples only if the chunks contain them or they are direct calculations from rules in the chunks." : "",
             intent.examFocus ? "Focus on what an exam asks: the steps to compute and what to write down." : "",
             DATA_RULE,
@@ -266,7 +267,7 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
         {
           role: "system",
           content: [
-            "You design one small interactive example for a course paragraph. Pick a template and fill its params. Use a template only when it truly fits: vector2d for a 2x2 matrix acting on vectors (eigenvectors, transformations), plot for a function you can drag along (e.g. a polynomial with its roots), stepper for worked procedures. For anything else (physical systems, architecture, processes, biology, analogies, anything you would draw on a whiteboard) choose 'illustration': a picture drawn by an image model, and leave paramsJson as '{}' and claims empty. Never force an idea into a template that does not fit it. Use 'custom' only for an interaction no template can express.",
+            "You design one small interactive example for a course paragraph. Pick a template and fill its params. Use a template only when it truly fits: vector2d for a 2x2 matrix acting on vectors (eigenvectors, transformations), plot for a function you can drag along (e.g. a polynomial with its roots), stepper for worked procedures. For anything else (physical systems, architecture, processes, comparisons, diagrams, anything you would sketch on a whiteboard) choose 'custom': a small self-contained interactive page with inline SVG or HTML (clickable steps, toggles, hover details), and leave paramsJson as '{}' and claims empty. Never force an idea into a template that does not fit it. Never produce a picture: pictures are only made when the student explicitly asks for one.",
             `Templates:\n${TEMPLATE_DOCS}`,
             "Claims are mathjs boolean expressions over the params that state the facts the widget teaches; they are recomputed in code. For vector2d, A is available as a matrix (e.g. 'A * [1, 1] == 3 * [1, 1]', 'det(A) == 3'). For plot, f(x) is the plotted function with slider values (e.g. 'f(2) == 0'). Give 2–4 claims.",
             "Numbers must come from the chunks when they give an example; otherwise choose small integers.",
@@ -285,7 +286,6 @@ export function buildMutateGraph(deps: MutateDeps, checkpointer: BaseCheckpointS
         },
       ],
     });
-    if (choice.template === "illustration") return drawPicture({ ...s, intent: { ...intent, addImage: true, addWidget: false } } as S);
     try {
       const spec = await toWidgetSpec(ctx, choice, s.request, blockText(block));
       const byId = new Map(s.chunks.map((c) => [c.id, c]));
@@ -467,7 +467,6 @@ async function toWidgetSpec(ctx: AiCtx, choice: z.infer<typeof WidgetChoiceSchem
   if (choice.template === "vector2d") return { template: "vector2d", title: choice.title, params: Vector2dParams.parse(params), claims: choice.claims };
   if (choice.template === "plot") return { template: "plot", title: choice.title, params: PlotParams.parse(params), claims: choice.claims };
   if (choice.template === "stepper") return { template: "stepper", title: choice.title, params: StepperParams.parse(params), claims: [] };
-  if (choice.template === "illustration") throw new Error("illustrations are drawn, not specified");
   // custom: Muse Code has no API, so Muse Spark writes the sandboxed HTML
   let html = typeof params.html === "string" ? params.html : "";
   if (!html) {
@@ -491,7 +490,8 @@ function blockText(b: Block): string {
   return b.spec.title ?? b.spec.template;
 }
 
-const PICTURE_WORDS = /\b(draw|drawing|sketch|picture|illustrat\w*|diagram|image|redraw)\b/i;
+/** Muse Image is only used when the student says so; tables, diagrams and examples are not pictures. */
+const PICTURE_WORDS = /\b(draw|drawing|sketch|picture|pictures|illustrat\w*|image|images|redraw)\b/i;
 
 /**
  * The classifier is a model; these cases must not depend on it. Asking to draw something, or asking
@@ -503,6 +503,8 @@ export function applyPictureHints(intent: Intent, request: string, kind: Block["
     intent.addWidget = false;
     intent.rewrite = false;
     intent.analogy = false;
+  } else {
+    intent.addImage = false; // the classifier alone never triggers an image
   }
   return intent;
 }
