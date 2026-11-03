@@ -102,7 +102,7 @@ function Tex({ tex, display }: { tex: string; display?: boolean }) {
   const html = useMemo(() => {
     try {
       // "%" starts a LaTeX comment; in course text it means percent
-      return katex.renderToString(tex.replace(/(?<!\\)%/g, "\\%"), { displayMode: display, throwOnError: false, trust: false, strict: "ignore", output: "htmlAndMathml" });
+      return katex.renderToString(tex.replace(/(?<!\\)%/g, "\\%").replace(/(?<![\\a-zA-Z])(det|tr|rank|dim|sin|cos|log|ln)(?=\()/g, "\\operatorname{$1}"), { displayMode: display, throwOnError: false, trust: false, strict: "ignore", output: "htmlAndMathml" });
     } catch {
       return null;
     }
