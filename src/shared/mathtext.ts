@@ -36,5 +36,5 @@ export function bulletText(line: string): string | null {
 
 /** True when the text carries a formula worth setting on its own line. */
 export function hasFormula(md: string): boolean {
-  return /\$\$|\\frac|\\sum|\\int|\\sqrt|\$[^$]*[=<>≤≥][^$]*\$|[A-Za-z]\w*(?:\([^)]*\))?\s=\s[^,.]*[A-Za-z0-9)]\s*[/*^+-]\s*[A-Za-z0-9(]/.test(md);
+  return /\$\$|\\frac|\\sum|\\int|\\sqrt|\$[^$]*[=<>≤≥][^$]*\$|[A-Za-z]\w*(?:\([^)]*\))?\s=\s[^,.]*[A-Za-z0-9)]\s*[/*^+\-−×·]\s*[A-Za-z0-9(]|\bdet\(|\b[A-Za-z]\w*\s=\s*λ/.test(md);
 }

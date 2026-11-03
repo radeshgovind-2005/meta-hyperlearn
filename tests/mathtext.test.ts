@@ -28,6 +28,8 @@ describe("line helpers", () => {
   it("spots formulas", () => {
     expect(hasFormula("so $$S = 1$$")).toBe(true);
     expect(hasFormula("Tp = f x T1 + (1 - f) x T1 / p")).toBe(true);
+    expect(hasFormula("For A = [[a, b], [c, d]], det(A) = ad − bc.")).toBe(true);
+    expect(hasFormula("A nonzero vector v is an eigenvector of A if Av = λv for some scalar λ.")).toBe(true);
     expect(hasFormula("Parallel computers are used for large problems.")).toBe(false);
   });
 });
