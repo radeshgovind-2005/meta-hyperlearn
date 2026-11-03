@@ -114,7 +114,7 @@ export async function gatherSectionChunks(env: Env, sources: SourceInfo[], pages
 /** How formulas are written, shared by the course writer and the rewrite writer. */
 export const MATH_RULES = [
   "Math is typeset with LaTeX. Inline symbols go in $...$, for example $T_p$ or $\\lambda$.",
-  "When a paragraph states a formula, give it its own line as $$...$$ (one line, no line breaks inside), written as a real fraction with \\frac{}{}, subscripts T_1 and powers x^2, then a line 'where:' and one line per symbol in the form '- $T_1$ is the execution time on one processor'. Say what every symbol in the formula is, using the source's words.",
+  "When a paragraph states a formula, give it its own line as $$...$$ (one line, no line breaks inside), written as a real fraction with \\frac{}{}, subscripts T_1 and powers x^2, then a line 'where:' and one line per symbol in the form '- $T_1$ is the execution time on one processor'. Each line says what the symbol MEANS or does, in the source's words (for example '- $\\lambda$ is an eigenvalue of $A$: a number by which $A$ only stretches or flips its eigenvector'). Never define a symbol by repeating it ('$\\lambda$ is $\\lambda$'). Skip function names like det and tr and entries a, b, c, d of a matrix already shown, unless the source explains them. At most 5 legend lines, each short.",
   "Matrices are typeset as $$A = \\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}$$ and vectors as $\\mathbf{v}$; never write a matrix as [[a, b], [c, d]] when you can typeset it.",
   "Keep the sentence that introduces the formula before it. Put each of these parts on its own line inside the same text block, separated by newlines.",
 ].join(" ");
