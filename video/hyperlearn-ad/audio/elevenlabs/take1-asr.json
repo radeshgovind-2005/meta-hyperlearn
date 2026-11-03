@@ -1,0 +1,13 @@
+{
+ "sessionId": "voyager/transcribe/7DAA5C92B46B42E59B9D910734B8EDC7",
+ "transcript": "The world never stops it keeps changing those who don't learn to adapt risk being left behind don't let that happen to you meet HyperLearn your material your learning path agents generate verify and repair simplify an explanation explore an interactive example practice adapt your path and share it with a friend a colleague or your students HyperLearn keep learning your way",
+ "audioDurationMs": 26960,
+ "turns": [
+  {
+   "turnId": 0,
+   "startMs": 0,
+   "endMs": 26460,
+   "transcript": "The world never stops it keeps changing those who don't learn to adapt risk being left behind don't let that happen to you meet HyperLearn your material your learning path agents generate verify and repair simplify an explanation explore an interactive example practice adapt your path and share it with a friend a colleague or your students HyperLearn keep learning your way"
+  }
+ ]
+}

@@ -1,0 +1,82 @@
+{
+  "issues": [
+    {
+      "fix": "Replace bridge-morph end frame with correct master HyperLearn artwork.",
+      "orientation": "16:9",
+      "problem": "9.4 logo reads 'HyperLearr' - n replaced by r.",
+      "severity": "high",
+      "time": "9.4"
+    },
+    {
+      "fix": "Reframe with safe padding to show full logo centered.",
+      "orientation": "9:16",
+      "problem": "9.4 logo cropped left, H cut off.",
+      "severity": "high",
+      "time": "9.4"
+    },
+    {
+      "fix": "Scale up genuine footage to fill frame width - crop/scale only, no content edit.",
+      "orientation": "16:9",
+      "problem": "10.4 app window tiny in white void, course text illegible.",
+      "severity": "high",
+      "time": "10.4"
+    },
+    {
+      "fix": "Hold transition until all nodes at 100% opacity at same weight.",
+      "orientation": "16:9",
+      "problem": "14.8 Verify node near-invisible, Save missing, graph looks broken.",
+      "severity": "medium",
+      "time": "14.8"
+    },
+    {
+      "fix": "Punch in on Verify checklist with scale-only callout for ~1s.",
+      "orientation": "both",
+      "problem": "16.6 proof points '10/10 sentences match...' too small to read.",
+      "severity": "medium",
+      "time": "16.6"
+    },
+    {
+      "fix": "Dissolve graph fully out before cutting to result.",
+      "orientation": "both",
+      "problem": "17.4 ghost of Generate-Verity-Repair shows through behind new text.",
+      "severity": "medium",
+      "time": "17.4"
+    },
+    {
+      "fix": "Scale result footage larger so slider and plot labels are readable.",
+      "orientation": "16:9",
+      "problem": "19.6 interactive plot and slider values soft and tiny.",
+      "severity": "low",
+      "time": "19.6"
+    },
+    {
+      "fix": "Remove intermediate; cut only when all recipients and Follow/Copy labels present.",
+      "orientation": "both",
+      "problem": "25.0 third blue share line points to empty space with no person.",
+      "severity": "medium",
+      "time": "25.0"
+    },
+    {
+      "fix": "Start end-card hold after figures reach full opacity and are fully in frame.",
+      "orientation": "both",
+      "problem": "26.8 end-card people ghost / invisible, card looks unfinished.",
+      "severity": "medium",
+      "time": "26.8"
+    },
+    {
+      "fix": "Adjust pan safe area so walker is fully in or fully out.",
+      "orientation": "16:9",
+      "problem": "8.6 walker sliced in half at right edge.",
+      "severity": "low",
+      "time": "8.6"
+    },
+    {
+      "fix": "Rebalance caption to one line or even two lines.",
+      "orientation": "9:16",
+      "problem": "4.4 caption orphans single word 'behind.' on second line.",
+      "severity": "low",
+      "time": "4.4"
+    }
+  ],
+  "overall": "Logo failure and illegible app footage block release. Fix logo letterforms/framing, scale genuine app pixels larger, and clean ghost/incomplete transitions."
+}

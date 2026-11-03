@@ -1,0 +1,199 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>HyperLearn intro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=block" rel="stylesheet">
+<style>
+:root{--ink:#1C2B33;--body:#3E4C59;--muted:#5B6B7A;--faint:#C2CAD2;--blue:#0A5CFF;--soft:#F1F4F7;--line:#E3E6EA;--green:#0A7A3D;--warn:#A14D00}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#fff}
+body{font-family:Figtree,system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;background:#fff}
+canvas{position:absolute;inset:0}
+.hl{position:absolute;left:0;right:0;text-align:center;font-weight:700;letter-spacing:-.035em;line-height:1.08;visibility:hidden}
+.w{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .02em .14em;margin-bottom:-.14em}
+.wi{display:inline-block;will-change:transform}
+.blue{color:var(--blue)} .mutedw{color:#A9B4BE}
+#h1,#h2{top:476px;font-size:120px}
+#h3{top:300px;font-size:84px}
+#h4{top:404px;font-size:84px}
+#h5{top:470px;font-size:132px}
+#h6{top:170px;font-size:96px}
+#meet{position:absolute;left:0;right:0;top:372px;text-align:center;font-size:44px;font-weight:600;color:var(--muted);letter-spacing:-.01em;opacity:0}
+#logo{position:absolute;opacity:0;transform-origin:0 0}
+#logo img{display:block;width:100%}
+#browser{position:absolute;left:240px;width:1440px;border-radius:22px;overflow:hidden;background:#fff;border:1px solid var(--line);box-shadow:0 30px 80px rgba(28,43,51,.10),0 4px 14px rgba(28,43,51,.05);opacity:0}
+#browser .bar{height:48px;background:#F6F7F9;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:8px;position:relative}
+#browser .bar i{width:12px;height:12px;border-radius:50%;background:#D4D9DE;display:block}
+#browser .url{position:absolute;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 22px;font-size:16px;color:var(--muted);font-weight:500}
+#browser img{display:block;width:1440px}
+#list{position:absolute;left:140px;top:300px;width:640px}
+.item{position:relative;font-size:64px;font-weight:700;letter-spacing:-.03em;line-height:1.06;margin-bottom:56px;color:var(--faint);opacity:0}
+.item small{display:block;font-size:22px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;margin-bottom:12px;color:inherit}
+#bar{position:absolute;left:-40px;width:6px;border-radius:6px;background:var(--blue);opacity:0}
+#card{position:absolute;left:820px;top:120px;width:960px;height:840px;border-radius:32px;background:var(--soft);overflow:hidden;opacity:0}
+.panel{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0}
+#crop{width:860px;height:711px;border-radius:18px;background:#fff url(shots/change-box.png) no-repeat;background-size:1651px 1032px;background-position:-355px 0;border:1px solid var(--line);box-shadow:0 18px 50px rgba(28,43,51,.08)}
+#plotwrap{position:relative;width:860px;height:680px}
+#plotwrap img{position:absolute;inset:0;width:860px;height:680px;border-radius:18px;box-shadow:0 18px 50px rgba(28,43,51,.08);visibility:hidden}
+#path{width:820px;background:#fff;border-radius:22px;border:1px solid var(--line);padding:34px 34px 26px;box-shadow:0 18px 50px rgba(28,43,51,.08)}
+#path .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:22px}
+#path .hd b{font-size:24px;font-weight:700;letter-spacing:-.01em}
+#path .hd span{font-size:19px;color:var(--blue);font-weight:500}
+.row{display:flex;align-items:center;gap:18px;height:66px;border:1px solid var(--line);border-radius:12px;padding:0 22px;margin-bottom:10px;font-size:21px;color:var(--ink);background:#fff;overflow:hidden}
+.row .dot{width:12px;height:12px;border-radius:50%;border:2px solid #AEB8C2;flex:none}
+.row .dot.done{background:var(--green);border-color:var(--green)}
+.row .dot.new{border-color:var(--warn)}
+.row .n{color:var(--muted);width:34px;flex:none}
+.row .t{flex:1;white-space:nowrap}
+.row .m{color:var(--muted);font-size:18px}
+.row .tag{color:var(--warn);font-size:17px;margin-left:10px;font-weight:500}
+#ins{height:0;margin-bottom:0;opacity:0;border-color:var(--warn)}
+#chip{display:inline-flex;align-items:center;gap:10px;margin-top:16px;padding:10px 18px;border-radius:999px;background:#EAF1FF;color:var(--blue);font-size:19px;font-weight:600;opacity:0}
+#chip i{width:8px;height:8px;border-radius:50%;background:var(--blue)}
+#fade{position:absolute;inset:0;background:#fff;opacity:0}
+</style></head>
+<body><div id="stage">
+<canvas id="grid" width="1920" height="1080"></canvas>
+<canvas id="dots" width="1920" height="1080"></canvas>
+<div class="hl" id="h1">The world never stops.</div>
+<div class="hl" id="h2">It keeps <span class="blue">changing.</span></div>
+<div class="hl" id="h3">And those who don’t learn to adapt</div>
+<div class="hl" id="h4">risk being <span class="mutedw">left behind.</span></div>
+<div class="hl" id="h5">Don’t let that happen to <span class="blue">you.</span></div>
+<div id="meet">Meet</div>
+<div id="logo"><img src="../design/assets/logo.png" alt="HyperLearn"></div>
+<div class="hl" id="h6">The future of e-learning is <span class="blue">personal.</span></div>
+<div id="browser"><div class="bar"><i></i><i></i><i></i><div class="url">hyperlearn.radesh-govind.com</div></div><img src="shots/cite0.png" alt=""></div>
+<div id="list">
+  <div id="bar"></div>
+  <div class="item" id="i1">Explanations you can change</div>
+  <div class="item" id="i2">Examples you can explore</div>
+  <div class="item" id="i3">A learning path that adapts</div>
+</div>
+<div id="card">
+  <div class="panel" id="p1"><div id="crop"></div></div>
+  <div class="panel" id="p2"><div id="plotwrap"></div></div>
+  <div class="panel" id="p3"><div>
+    <div id="path">
+      <div class="hd"><b>2 · Lecture 7 — Eigenvectors and Eigenvalues</b><span>In progress</span></div>
+      <div class="row" id="ins"><i class="dot new"></i><span class="n"></span><span class="t">Scalar Multiples Review<span class="tag">added for you</span></span><span class="m">6 min</span></div>
+      <div class="row"><i class="dot done"></i><span class="n">2.1</span><span class="t">What Eigenvectors Are</span><span class="m">8 min</span></div>
+      <div class="row"><i class="dot"></i><span class="n">2.2</span><span class="t">Eigenvectors of Symmetric and Diagonal Matrices</span><span class="m">7 min</span></div>
+      <div class="row"><i class="dot"></i><span class="n">2.3</span><span class="t">Finding Eigenvalues</span><span class="m">8 min</span></div>
+      <div class="row"><i class="dot"></i><span class="n">2.4</span><span class="t">Finding Eigenvectors and Checking Work</span><span class="m">8 min</span></div>
+    </div>
+    <div id="chip"><i></i>Re-planned your path after practice</div>
+  </div></div>
+</div>
+<div id="fade"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const E={out:x=>1-Math.pow(1-x,3),inOut:x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2,expo:x=>x>=1?1:1-Math.pow(2,-10*x),in:x=>x*x*x};
+const k=(t,a,b,e=E.out)=>t<=a?0:t>=b?1:e((t-a)/(b-a));
+const lerp=(a,b,p)=>a+(b-a)*p;
+const mix=(c1,c2,p)=>{const h=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));const a=h(c1),b=h(c2);return `rgb(${a.map((v,i)=>Math.round(lerp(v,b[i],p))).join(',')})`};
+
+// split headlines into masked words
+document.querySelectorAll('.hl').forEach(el=>{
+  const out=[];
+  el.childNodes.forEach(n=>{
+    const cls=n.nodeType===1?n.className:'';
+    n.textContent.split(/\s+/).filter(Boolean).forEach(w=>out.push(`<span class="w"><span class="wi ${cls}">${w}</span></span>`));
+  });
+  el.innerHTML=out.join(' ');
+});
+function words(id,t,tin,tout,stag=.05){
+  const el=$(id);el.style.visibility=(t>=tin-.01&&(tout==null||t<tout+.6))?'visible':'hidden';
+  el.querySelectorAll('.wi').forEach((w,i)=>{
+    const p=k(t,tin+i*stag,tin+i*stag+.6,E.expo), q=tout==null?0:k(t,tout+i*.025,tout+i*.025+.42,E.inOut);
+    w.style.transform=`translateY(${(1-p)*108-q*108}%)`;w.style.opacity=Math.min(p,1-q);
+  });
+}
+// plot frames
+const pw=$('plotwrap');
+for(let i=0;i<36;i++){const im=new Image();im.src=`shots/plotseq/${String(i).padStart(2,'0')}.png`;pw.appendChild(im)}
+
+const g=$('grid').getContext('2d'), d=$('dots').getContext('2d');
+function rr(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);c.fill()}
+function drawGrid(t){
+  g.clearRect(0,0,1920,1080);
+  const op=k(t,0,.7)*(1-k(t,3.0,3.45,E.inOut)); if(op<=0)return;
+  const pitch=64,s=22,shift=(t*38)%pitch, rate=t<1.97?1:1+1.6*k(t,1.97,2.6);
+  const ph=t*2.1+ (t>1.97?(t-1.97)*1.4:0);
+  for(let j=-1;j<19;j++)for(let i=-1;i<32;i++){
+    const x=i*pitch-shift+ (j%2?pitch/2:0), y=j*pitch+12;
+    const dx=x+s/2-960, dy=y+s/2-540, dist=Math.sqrt(dx*dx/1.6+dy*dy*1.4);
+    const mask=Math.min(1,Math.max(0,(dist-260)/380)); if(mask<=0)continue;
+    const v=Math.sin(i*.73+j*1.31+ph)*Math.sin(i*.29-j*.47-ph*.8*rate);
+    const hot=Math.max(0,(v-.55)/.45);
+    g.globalAlpha=op*mask; g.fillStyle=hot>0?mix('#E9EDF1','#0A5CFF',Math.min(1,hot*1.2)):'#E9EDF1';
+    const sc=1+hot*.25; rr(g,x+s/2-s*sc/2,y+s/2-s*sc/2,s*sc,s*sc,6);
+  }
+  g.globalAlpha=1;
+}
+function drawDots(t){
+  d.clearRect(0,0,1920,1080);
+  const op=k(t,3.25,3.7)*(1-k(t,7.15,7.55,E.inOut)); if(op<=0)return;
+  const y=690;
+  // moving track
+  d.globalAlpha=op;d.fillStyle='#E3E6EA';
+  const off=(t*520)%60; for(let x=-60+(-off);x<1980;x+=60) rr(d,x,y-1.5,30,3,2);
+  const enter=1-k(t,3.25,4.0,E.expo);
+  for(let j=0;j<6;j++){
+    const x=900+j*74+enter*520+Math.sin(t*6+j)*3, yy=y+Math.sin(t*7+j*1.3)*4;
+    d.fillStyle='#0A5CFF';d.beginPath();d.arc(x,yy,15,0,7);d.fill();
+  }
+  // the one that falls behind
+  const lag=k(t,4.3,7.0,E.in), col=k(t,4.0,5.9);
+  const lx=826+enter*520-lag*640, ly=y+Math.sin(t*7-1.3)*4*(1-col);
+  d.globalAlpha=op*(1-.65*k(t,5.7,7.0));
+  d.fillStyle=mix('#0A5CFF','#B8C2CC',col);d.beginPath();d.arc(lx,ly,15,0,7);d.fill();
+  d.globalAlpha=1;
+}
+function place(el,o){for(const p in o)el.style[p]=o[p]}
+function seek(t){
+  drawGrid(t);drawDots(t);
+  words('h1',t,.05,1.72);
+  words('h2',t,1.95,3.05);
+  words('h3',t,3.40,7.05,.045);
+  words('h4',t,5.62,7.05);
+  words('h5',t,7.52,9.0);
+  // Meet + logo
+  const mIn=k(t,9.4,9.9,E.expo), mOut=k(t,10.4,10.7,E.inOut);
+  place($('meet'),{opacity:mIn*(1-mOut),transform:`translateY(${(1-mIn)*24-mOut*20}px)`});
+  const lIn=k(t,9.62,10.4,E.expo), mv=k(t,10.5,11.05,E.inOut);
+  const w=lerp(980,200,mv), x=lerp(470,80,mv), y=lerp(452,58,mv);
+  place($('logo'),{opacity:t<9.6?0:1,width:w+'px',left:x+'px',top:y+'px',clipPath:`inset(-5% ${(1-lIn)*100}% -5% 0)`,transform:`translateY(${(1-lIn)*14}px)`});
+  words('h6',t,11.0,13.0,.055);
+  const bIn=k(t,11.55,12.4,E.expo), bOut=k(t,13.0,13.4,E.inOut);
+  place($('browser'),{opacity:Math.min(1,bIn*1.5)*(1-bOut),top:(lerp(1080,340,bIn)-(t-11.55)*22-bOut*160)+'px'});
+  // feature list + card
+  const items=['i1','i2','i3'], act=[13.24,15.0,16.82];
+  items.forEach((id,i)=>{
+    const p=k(t,13.2+i*.08,13.85+i*.08,E.expo), on=k(t,act[i]-.05,act[i]+.3)-(i<2?k(t,act[i+1]-.05,act[i+1]+.3):0);
+    place($(id),{opacity:p,transform:`translateY(${(1-p)*40}px)`,color:mix('#C2CAD2','#1C2B33',on)});
+  });
+  const it=items.map(id=>$(id)), seg=t<15?0:t<16.82?1:2;
+  const pos=it.map(e=>[e.offsetTop,e.offsetHeight]);
+  const a1=k(t,14.95,15.4,E.inOut),a2=k(t,16.77,17.2,E.inOut);
+  const top=lerp(lerp(pos[0][0],pos[1][0],a1),pos[2][0],a2), h=lerp(lerp(pos[0][1],pos[1][1],a1),pos[2][1],a2);
+  place($('bar'),{opacity:k(t,13.3,13.7),top:top+'px',height:h+'px'});
+  const cIn=k(t,13.15,13.9,E.expo);
+  place($('card'),{opacity:cIn,transform:`translateX(${(1-cIn)*120}px)`});
+  const pv=(a,b,c)=>{const i=k(t,a,a+.45,E.expo),o=c==null?0:k(t,c,c+.3,E.inOut);return [i*(1-o),i,o]};
+  const [o1,i1]=pv(13.2,0,14.95),[o2,i2]=pv(15.0,0,16.77),[o3,i3]=pv(16.82);
+  place($('p1'),{opacity:o1,transform:`scale(${lerp(.96,1,i1)+(t-13.2)*.012})`});
+  place($('p2'),{opacity:o2,transform:`scale(${lerp(.96,1,i2)})`});
+  place($('p3'),{opacity:o3,transform:`scale(${lerp(.96,1,i3)})`});
+  const fi=Math.max(0,Math.min(35,Math.floor((t-15.15)/1.35*35)));
+  [...pw.children].forEach((im,i)=>im.style.visibility=i===fi?'visible':'hidden');
+  const ins=k(t,17.75,18.35,E.expo);
+  place($('ins'),{height:66*ins+'px',marginBottom:10*ins+'px',opacity:k(t,17.95,18.4),boxShadow:`0 0 0 ${3*k(t,18.3,18.7)}px rgba(161,77,0,.18)`});
+  const ch=k(t,18.55,19.0,E.expo);
+  place($('chip'),{opacity:ch,transform:`translateY(${(1-ch)*14}px)`});
+  $('fade').style.opacity=k(t,20.05,20.6,E.inOut);
+}
+window.seek=seek;window.ready=Promise.all([document.fonts.ready,...[...document.images].map(i=>i.decode().catch(()=>{}))]);
+seek(+(location.hash.slice(1)||0));
+</script></body></html>

@@ -1,0 +1,522 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>HyperLearn demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&family=Source+Serif+4:wght@400;600&display=block" rel="stylesheet">
+<style>
+:root{--ink:#1C2B33;--body:#3E4C59;--muted:#5B6B7A;--faint:#C2CAD2;--blue:#0A5CFF;--blue-soft:#EAF1FF;--blue-line:#BCD2FF;--soft:#F1F4F7;--line:#E3E6EA;--green:#0A7A3D;--green-soft:#E7F4EC;--warn:#A14D00;--warn-soft:#FBF0E6}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#fff}
+body{font-family:Figtree,system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;background:#fff}
+canvas{position:absolute;left:0;top:0;width:1920px;height:1080px}
+.abs{position:absolute}
+.scene{position:absolute;inset:0;display:none}
+.hl,.hx{position:absolute;font-weight:700;letter-spacing:-.035em;line-height:1.08;visibility:hidden}
+.hl{left:0;right:0;text-align:center}
+.w{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .02em .14em;margin-bottom:-.14em}
+.wi{display:inline-block}
+.blue{color:var(--blue)} .mutedw{color:#A9B4BE} .mutedt{color:var(--muted)}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.chip{z-index:3;position:absolute;display:inline-flex;align-items:center;gap:12px;padding:12px 22px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:24px;font-weight:600;color:var(--ink);white-space:nowrap;opacity:0}
+.chip.on{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue)}
+.chip i{width:10px;height:10px;border-radius:50%;background:currentColor;display:block}
+.card{z-index:3;position:absolute;background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 50px rgba(28,43,51,.08)}
+.panel{position:absolute;background:var(--soft);border-radius:28px}
+/* browser frame */
+.bw{z-index:1;position:absolute;border-radius:18px;overflow:hidden;background:#fff;border:1px solid var(--line);box-shadow:0 30px 80px rgba(28,43,51,.10),0 4px 14px rgba(28,43,51,.05);opacity:0}
+.bw .bar{height:40px;background:#F6F7F9;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 16px;gap:7px;position:relative}
+.bw .bar i{width:11px;height:11px;border-radius:50%;background:#D4D9DE;display:block}
+.bw .url{position:absolute;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 20px;font-size:14px;color:var(--muted);font-weight:500}
+.bw .vp{position:relative;overflow:hidden}
+.bw .zoom{position:absolute;left:0;top:0;width:1440px;height:900px;transform-origin:0 0}
+.bw .zoom>*{position:absolute;left:0;top:0;width:1440px;height:900px;object-fit:cover;visibility:hidden}
+.speed{z-index:3;position:absolute;padding:8px 16px;border-radius:999px;background:rgba(28,43,51,.86);color:#fff;font-size:18px;font-weight:600;opacity:0}
+/* intro */
+#h1,#h2{top:476px;font-size:120px}
+#h3{top:300px;font-size:84px}
+#h4{top:404px;font-size:84px}
+#h5{top:470px;font-size:132px}
+#h6{top:170px;font-size:96px}
+#meet{position:absolute;left:0;right:0;top:372px;text-align:center;font-size:44px;font-weight:600;color:var(--muted);opacity:0}
+#logo{position:absolute;opacity:0;transform-origin:0 0;z-index:5}
+#logo img{display:block;width:100%}
+#ilist{position:absolute;left:140px;top:300px;width:640px}
+.item{position:relative;font-size:64px;font-weight:700;letter-spacing:-.03em;line-height:1.06;margin-bottom:56px;color:var(--faint);opacity:0}
+#ibar{position:absolute;left:-40px;width:6px;border-radius:6px;background:var(--blue);opacity:0}
+#icard{position:absolute;left:820px;top:120px;width:960px;height:840px;border-radius:32px;background:var(--soft);overflow:hidden;opacity:0}
+.ipanel{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0}
+#crop{width:860px;height:711px;border-radius:18px;background:#fff url(shots/change-box.png) no-repeat;background-size:1651px 1032px;background-position:-355px 0;border:1px solid var(--line);box-shadow:0 18px 50px rgba(28,43,51,.08)}
+#plotwrap{position:relative;width:860px;height:680px}
+#plotwrap img{position:absolute;inset:0;width:860px;height:680px;border-radius:18px;box-shadow:0 18px 50px rgba(28,43,51,.08);visibility:hidden}
+#path{width:820px;background:#fff;border-radius:22px;border:1px solid var(--line);padding:34px 34px 26px;box-shadow:0 18px 50px rgba(28,43,51,.08)}
+#path .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:22px}
+#path .hd b{font-size:24px;font-weight:700}
+#path .hd span{font-size:19px;color:var(--blue);font-weight:500}
+.row{display:flex;align-items:center;gap:18px;height:66px;border:1px solid var(--line);border-radius:12px;padding:0 22px;margin-bottom:10px;font-size:21px;background:#fff;overflow:hidden}
+.row .dot{width:12px;height:12px;border-radius:50%;border:2px solid #AEB8C2;flex:none}
+.row .dot.done{background:var(--green);border-color:var(--green)}
+.row .dot.new{border-color:var(--warn)}
+.row .n{color:var(--muted);width:34px;flex:none}
+.row .t{flex:1;white-space:nowrap}
+.row .m{color:var(--muted);font-size:18px}
+.row .tag{color:var(--warn);font-size:17px;margin-left:10px;font-weight:500}
+#ins{height:0;margin-bottom:0;opacity:0;border-color:var(--warn)}
+#ichip{display:inline-flex;align-items:center;gap:10px;margin-top:16px;padding:10px 18px;border-radius:999px;background:var(--blue-soft);color:var(--blue);font-size:19px;font-weight:600;opacity:0}
+#ichip i{width:8px;height:8px;border-radius:50%;background:var(--blue)}
+/* loop */
+.node{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:16px;border:1.5px solid var(--line);background:#fff;font-weight:700;color:var(--muted);transition:none}
+.node.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.node.ok{background:var(--green-soft);border-color:#A9D8BC;color:var(--green)}
+.node.bad{background:var(--warn-soft);border-color:#EDC9A6;color:var(--warn)}
+/* workflow cards */
+.wf{position:absolute;top:330px;width:324px;height:420px;padding:30px 28px;background:#fff;border:1.5px solid var(--line);border-radius:24px;opacity:0;display:flex;flex-direction:column}
+.wf .num{font-size:20px;color:var(--blue);font-weight:600}
+.wf h3{font-size:34px;line-height:1.08;letter-spacing:-.025em;margin:22px 0 16px}
+.wf p{font-size:21px;line-height:1.4;color:var(--body)}
+.wf .g{margin-top:auto;font-size:16px;color:var(--muted)}
+/* block stack */
+.blk{position:absolute;left:100px;width:560px;height:52px;border-radius:12px;border:1.5px solid var(--line);background:#fff;display:flex;align-items:center;padding:0 18px;gap:14px;font-size:20px;overflow:hidden;opacity:0}
+.blk .k{font-weight:700;width:96px}
+.blk .id{color:var(--muted);font-size:15px;flex:1}
+.blk .tg{font-size:16px;font-weight:600;padding:4px 12px;border-radius:999px;opacity:0}
+.tg.u{background:var(--green-soft);color:var(--green)}
+.tg.c{background:var(--blue-soft);color:var(--blue)}
+/* checks */
+.chk{position:absolute;left:100px;width:640px;height:128px;padding:20px 24px;display:flex;gap:20px;align-items:flex-start;opacity:0}
+.chk .ic{flex:none;width:44px;height:44px;border-radius:50%;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800}
+.chk b{display:block;font-size:26px;letter-spacing:-.015em}
+.chk span{display:block;font-size:19px;color:var(--body);line-height:1.35;margin-top:4px}
+.chk em{position:absolute;right:20px;top:20px;font-style:normal;font-size:15px;font-weight:600;color:var(--muted);background:var(--soft);padding:4px 12px;border-radius:999px}
+/* model cards */
+.mc{position:absolute;width:560px;height:330px;padding:28px 30px;border:1.5px solid var(--line);border-radius:24px;background:#fff;opacity:0}
+.mc h3{font-size:34px;letter-spacing:-.025em}
+.mc .pv{display:inline-block;margin-top:8px;font-size:16px;font-weight:600;color:var(--muted);background:var(--soft);padding:4px 12px;border-radius:999px}
+.mc img,.mc .wave{position:absolute;right:26px;top:26px;width:208px;height:120px;object-fit:cover;object-position:left top;border-radius:12px;border:1px solid var(--line)}
+.mc .jobs{position:absolute;left:30px;right:30px;bottom:26px;display:flex;flex-wrap:wrap;gap:10px}
+.mc .jobs span{font-size:19px;font-weight:600;padding:8px 16px;border-radius:999px;border:1px solid var(--line);color:var(--faint);background:#fff}
+.mc .jobs span.on{color:var(--blue);background:var(--blue-soft);border-color:var(--blue-line)}
+/* architecture */
+.an{position:absolute;border:1.5px solid var(--line);border-radius:18px;background:#fff;padding:16px 22px;opacity:0}
+.an b{display:block;font-size:26px;letter-spacing:-.015em}
+.an span{display:block;font-size:18px;color:var(--muted);margin-top:4px}
+.an.on{border-color:var(--blue);background:var(--blue-soft)}
+.an.on b{color:var(--blue)}
+.an.ext{border-style:dashed}
+#endlinks div{font-size:28px;margin-bottom:16px;color:var(--ink)} #endlinks span{display:inline-block;width:140px;color:var(--muted);font-weight:500}
+</style></head>
+<body><div id="stage">
+<!-- ============ INTRO ============ -->
+<div id="intro">
+<canvas id="grid" width="3840" height="2160"></canvas>
+<canvas id="dots" width="3840" height="2160"></canvas>
+<div class="hl" id="h1">The world never stops.</div>
+<div class="hl" id="h2">It keeps <span class="blue">changing.</span></div>
+<div class="hl" id="h3">And those who don’t learn to adapt</div>
+<div class="hl" id="h4">risk being <span class="mutedw">left behind.</span></div>
+<div class="hl" id="h5">Don’t let that happen to <span class="blue">you.</span></div>
+<div id="meet">Meet</div>
+<div class="hl" id="h6">The future of e-learning is <span class="blue">personal.</span></div>
+<div id="ibrowser"></div>
+<div id="ilist"><div id="ibar"></div>
+  <div class="item" id="i1">Explanations you can change</div>
+  <div class="item" id="i2">Examples you can explore</div>
+  <div class="item" id="i3">A learning path that adapts</div>
+</div>
+<div id="icard">
+  <div class="ipanel" id="p1"><div id="crop"></div></div>
+  <div class="ipanel" id="p2"><div id="plotwrap"></div></div>
+  <div class="ipanel" id="p3"><div>
+    <div id="path">
+      <div class="hd"><b>2 · Lecture 7 — Eigenvectors and Eigenvalues</b><span>In progress</span></div>
+      <div class="row" id="ins"><i class="dot new"></i><span class="n"></span><span class="t">Scalar Multiples Review<span class="tag">added for you</span></span><span class="m">6 min</span></div>
+      <div class="row"><i class="dot done"></i><span class="n">2.1</span><span class="t">What Eigenvectors Are</span><span class="m">8 min</span></div>
+      <div class="row"><i class="dot"></i><span class="n">2.2</span><span class="t">Eigenvectors of Symmetric and Diagonal Matrices</span><span class="m">7 min</span></div>
+      <div class="row"><i class="dot"></i><span class="n">2.3</span><span class="t">Finding Eigenvalues</span><span class="m">8 min</span></div>
+      <div class="row"><i class="dot"></i><span class="n">2.4</span><span class="t">Finding Eigenvectors and Checking Work</span><span class="m">8 min</span></div>
+    </div>
+    <div id="ichip"><i></i>Re-planned your path after practice</div>
+  </div></div>
+</div>
+</div>
+
+<!-- ============ SYSTEM ============ -->
+<div class="scene" id="sc-sys">
+  <div class="hx" id="sysH" style="left:100px;top:170px;font-size:64px;width:620px">Source-grounded, adaptive learning</div>
+  <div class="card" id="loopc" style="left:100px;top:400px;width:600px;height:250px;opacity:0">
+    <div class="node" id="lg" style="left:34px;top:44px;width:160px;height:76px;font-size:24px">Generate</div>
+    <div class="node" id="lv" style="left:220px;top:44px;width:160px;height:76px;font-size:24px">Verify</div>
+    <div class="node" id="lr" style="left:406px;top:44px;width:160px;height:76px;font-size:24px">Repair</div>
+    <svg class="abs" style="left:0;top:0" width="600" height="250"><path id="larc" d="M486 128 C486 215 114 215 114 128" fill="none" stroke="#0A5CFF" stroke-width="3" stroke-dasharray="560" stroke-dashoffset="560"/><path id="lhead" d="M104 140 L114 126 L124 140" fill="none" stroke="#0A5CFF" stroke-width="3" opacity="0"/>
+      <path d="M196 82 L216 82" stroke="#AEB8C2" stroke-width="3"/><path d="M382 82 L402 82" stroke="#AEB8C2" stroke-width="3"/></svg>
+  </div>
+  <div class="chip" id="pp0" style="left:100px;top:700px"><i></i>Traceability</div>
+  <div class="chip" id="pp1" style="left:100px;top:776px"><i></i>Controlled changes</div>
+  <div class="chip" id="pp2" style="left:100px;top:852px"><i></i>Personalized progression</div>
+  <div class="hx" id="wfH" style="left:100px;top:140px;font-size:60px">Five specialized workflows</div>
+  <div id="wfx" class="abs" style="inset:0"></div>
+  <div class="hl" id="wfP" style="top:470px;font-size:76px">Here’s what that means in practice.</div>
+</div>
+
+<!-- ============ SOURCES ============ -->
+<div class="scene" id="sc-src">
+  <div class="hx" id="srcH1" style="left:100px;top:180px;font-size:56px;width:460px">Bring your own material</div>
+  <div class="hx" id="srcH2" style="left:100px;top:180px;font-size:56px;width:460px">A course built around it</div>
+  <div class="hx" id="srcH3" style="left:100px;top:180px;font-size:56px;width:460px">Every sentence points to its source</div>
+  <div class="chip" id="ft0" style="left:100px;top:420px"><i></i>Slides</div>
+  <div class="chip" id="ft1" style="left:100px;top:496px"><i></i>Papers</div>
+  <div class="chip" id="ft2" style="left:100px;top:572px"><i></i>Notes</div>
+  <div class="chip" id="ft3" style="left:100px;top:648px"><i></i>Lecture recordings</div>
+  <div class="chip" id="ft4" style="left:100px;top:724px"><i></i>Past exams</div>
+  <div class="chip on" id="ct0" style="left:100px;top:460px"><i></i>Highlighted page region</div>
+  <div class="chip on" id="ct1" style="left:100px;top:536px"><i></i>Audio timestamp</div>
+</div>
+
+<!-- ============ MUTATE ============ -->
+<div class="scene" id="sc-mut">
+  <div class="speed" id="mSpeed" style="left:1480px;top:156px">Running live · 14× speed</div>
+  <div class="card" id="pipe" style="left:430px;top:880px;width:1060px;height:110px;opacity:0">
+    <div class="chip" id="pc0" style="left:26px;top:28px">Classify intent</div>
+    <div class="chip" id="pc1" style="left:300px;top:28px">Gather cited context</div>
+    <div class="chip" id="pc2" style="left:620px;top:28px">Write text ∥ Build widget</div>
+  </div>
+  <div class="hx" id="mH" style="left:100px;top:150px;font-size:52px;width:640px">Typed blocks, small patches</div>
+  <div class="abs mono" id="mZ" style="left:100px;top:290px;font-size:20px;color:var(--muted);opacity:0">PatchOp[] · schema-validated with zod</div>
+</div>
+
+<!-- ============ VERIFY ============ -->
+<div class="scene" id="sc-ver">
+  <div class="hl" id="vH" style="top:170px;font-size:64px">Closed-loop generation and verification</div>
+  <svg class="abs" id="vsvg" style="left:0;top:0" width="1920" height="1080">
+    <defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#AEB8C2" stroke-width="2"/></marker></defs>
+    <path id="va1" d="M600 500 L728 500" stroke="#AEB8C2" stroke-width="3" marker-end="url(#ah)"/>
+    <path id="va2" d="M1100 500 L1228 500" stroke="#0A7A3D" stroke-width="3" marker-end="url(#ah)"/>
+    <path id="va3" d="M960 548 L960 640" stroke="#A14D00" stroke-width="3" marker-end="url(#ah)"/>
+    <path id="va4" d="M840 690 C 560 690 480 640 480 556" fill="none" stroke="#A14D00" stroke-width="3" marker-end="url(#ah)"/>
+    <circle id="vdot" r="10" fill="#0A5CFF" cx="-50" cy="-50"/>
+  </svg>
+  <div class="node" id="vG" style="left:360px;top:452px;width:240px;height:96px;font-size:30px">Generate</div>
+  <div class="node" id="vV" style="left:740px;top:452px;width:360px;height:96px;font-size:30px">Verify</div>
+  <div class="node ok" id="vS" style="left:1240px;top:452px;width:240px;height:96px;font-size:30px">Save</div>
+  <div class="node bad" id="vR" style="left:840px;top:644px;width:240px;height:96px;font-size:30px">Repair</div>
+  <div class="hx" id="vH2" style="left:100px;top:150px;font-size:52px;width:660px">Every change is checked</div>
+  <div class="card chk" id="ck0" style="top:260px"><div class="ic">✓</div><div><b>Source check</b><span>Verifier checked 10 sentences: 10 matched their source</span></div><em>model</em></div>
+  <div class="card chk" id="ck1" style="top:406px"><div class="ic">✓</div><div><b>Math check</b><span>Recomputed 3 widget claims with mathjs: 3 hold</span></div><em>code</em></div>
+  <div class="card chk" id="ck2" style="top:552px"><div class="ic">✓</div><div><b>Browser run</b><span>Loaded the example in a browser: 0 errors</span></div><em>Browser Rendering</em></div>
+  <div class="card chk" id="ck3" style="top:698px"><div class="ic">✓</div><div><b>Screenshot review</b><span>Slider and live plot are visible, readable, and match the request</span></div><em>Muse Spark</em></div>
+  <div class="hl" id="vH3" style="top:200px;font-size:64px">A bounded repair loop</div>
+  <div class="node" id="rp0" style="left:170px;top:400px;width:250px;height:90px;font-size:26px">Verify ✕</div>
+  <div class="node bad" id="rp1" style="left:500px;top:400px;width:250px;height:90px;font-size:26px">Repair · try 1</div>
+  <div class="node" id="rp2" style="left:830px;top:400px;width:250px;height:90px;font-size:26px">Verify ✕</div>
+  <div class="node bad" id="rp3" style="left:1160px;top:400px;width:250px;height:90px;font-size:26px">Repair · try 2</div>
+  <div class="node ok" id="rp4" style="left:1490px;top:400px;width:250px;height:90px;font-size:26px">Verify ✓</div>
+  <div class="card" id="rq0" style="left:370px;top:600px;width:560px;height:150px;padding:26px 30px;opacity:0"><b style="font-size:26px">Unsupported parts removed</b><div style="font-size:20px;color:var(--muted);margin-top:10px;text-decoration:line-through;text-decoration-color:var(--warn)">A sentence its cited passage does not support</div></div>
+  <div class="card" id="rq1" style="left:990px;top:600px;width:560px;height:150px;padding:26px 30px;opacity:0"><b style="font-size:26px">Unavailable checks recorded</b><div style="font-size:20px;color:var(--muted);margin-top:10px">Shown in “How this was decided”, never skipped silently</div></div>
+  <div class="hx" id="vH4" style="left:100px;top:170px;font-size:52px;width:620px">Content-addressed, versioned, reversible</div>
+  <div class="card" id="st0" style="left:100px;top:400px;width:620px;height:116px;padding:22px 26px;opacity:0"><div class="mono" style="font-size:21px;color:var(--blue)">blocks/&lt;sha256&gt;.json</div><div style="font-size:19px;color:var(--muted);margin-top:8px">Each block stored once, by its content</div></div>
+  <div class="card" id="st1" style="left:100px;top:536px;width:620px;height:116px;padding:22px 26px;opacity:0"><div class="mono" style="font-size:21px;color:var(--blue)">version = ordered list of block hashes</div><div style="font-size:19px;color:var(--muted);margin-top:8px">Untouched blocks keep their citations</div></div>
+  <div class="card" id="st2" style="left:100px;top:672px;width:620px;height:116px;padding:22px 26px;opacity:0"><div class="mono" style="font-size:21px;color:var(--green)">Undo = previous version</div><div style="font-size:19px;color:var(--muted);margin-top:8px">Every change can be reversed</div></div>
+</div>
+
+<!-- ============ ADAPT ============ -->
+<div class="scene" id="sc-ada">
+  <div class="speed" id="aSpeed" style="left:1480px;top:156px">Running live · 12× speed</div>
+  <div class="chip on" id="am0" style="left:120px;top:300px;box-shadow:0 12px 30px rgba(28,43,51,.12)"><i></i>Muse Spark · diagnoses the mistake</div>
+  <div class="chip on" id="am1" style="left:120px;top:380px;box-shadow:0 12px 30px rgba(28,43,51,.12)"><i></i>Muse Wonder · re-plans the path</div>
+</div>
+
+<!-- ============ SHARE ============ -->
+<div class="scene" id="sc-shr"></div>
+
+<!-- ============ MODELS ============ -->
+<div class="scene" id="sc-mod">
+  <div class="hx" id="moH" style="left:100px;top:140px;font-size:60px">Different models, different jobs</div>
+  <div class="mc" id="mc0" style="left:100px;top:270px"><h3>Muse Spark</h3><span class="pv">Meta</span><img src="crops/spark.png"><div class="jobs"><span>Source understanding</span><span>Lesson generation</span><span>Grading</span><span>Tool calling</span><span>Source verification</span></div></div>
+  <div class="mc" id="mc1" style="left:680px;top:270px"><h3>Muse Wonder</h3><span class="pv">Meta</span><img src="crops/wonder.png"><div class="jobs"><span>Learning-path re-planning</span></div></div>
+  <div class="mc" id="mc2" style="left:1260px;top:270px"><h3>Voice Transcribe</h3><span class="pv">Meta</span><img src="crops/transcribe.png"><div class="jobs"><span>Timestamped transcripts</span></div></div>
+  <div class="mc" id="mc3" style="left:100px;top:630px"><h3>Muse Image</h3><span class="pv">Meta</span><img src="crops/image.png" style="object-position:center"><div class="jobs"><span>Labelled illustrations</span></div></div>
+  <div class="mc" id="mc4" style="left:680px;top:630px"><h3>BGE embeddings</h3><span class="pv">Cloudflare Workers AI</span><img src="crops/bge.png"><div class="jobs"><span>Retrieval</span></div></div>
+  <div class="mc" id="mc5" style="left:1260px;top:630px"><h3>MeloTTS</h3><span class="pv">Cloudflare Workers AI</span><div class="wave" id="wave"></div><div class="jobs"><span>Narration</span><span>Script by Muse Spark</span></div></div>
+</div>
+
+<!-- ============ CLOUDFLARE ============ -->
+<div class="scene" id="sc-cf">
+  <div class="hx" id="cfH" style="left:110px;top:140px;font-size:60px">Built on Cloudflare</div>
+  <svg class="abs" id="cfsvg" style="left:0;top:0" width="1920" height="1080"></svg>
+  <div class="an" id="an-br" style="left:110px;top:476px;width:250px"><b>Browser</b><span>React app</span></div>
+  <div class="an" id="an-wk" style="left:540px;top:456px;width:360px;padding:26px 28px"><b>Workers</b><span>Hono API on the edge</span></div>
+  <div class="an ext" id="an-meta" style="left:540px;top:236px;width:360px"><b>Meta Model API</b><span>Spark · Wonder · Image · Transcribe</span></div>
+  <div class="an" id="an-ai" style="left:540px;top:716px;width:360px"><b>Workers AI</b><span>BGE embeddings · MeloTTS</span></div>
+  <div class="an" id="an-wf" style="left:1160px;top:200px;width:640px"><b>Workflows</b><span>Durable ingestion and course-building jobs</span></div>
+  <div class="an" id="an-do" style="left:1160px;top:310px;width:640px"><b>Durable Objects</b><span>Live course state, streaming, checkpoints, spend limits</span></div>
+  <div class="an" id="an-d1" style="left:1160px;top:420px;width:640px"><b>D1</b><span>Courses, versions, structured data</span></div>
+  <div class="an" id="an-r2" style="left:1160px;top:530px;width:640px"><b>R2</b><span>Sources and content-addressed blocks</span></div>
+  <div class="an" id="an-vz" style="left:1160px;top:640px;width:640px"><b>Vectorize</b><span>Searchable evidence</span></div>
+  <div class="an" id="an-bx" style="left:1160px;top:750px;width:640px"><b>Browser Rendering</b><span>Tests generated widgets</span></div>
+</div>
+
+<!-- ============ CLOSING ============ -->
+<div class="scene" id="sc-clo">
+  <div class="hx" id="cH" style="left:100px;top:220px;font-size:76px;width:620px"><span class="blue">Verifiable</span> adaptation</div>
+  <div class="chip" id="cc0" style="left:100px;top:470px"><i></i>Personalized content and progression</div>
+  <div class="chip" id="cc1" style="left:100px;top:546px"><i></i>Source provenance</div>
+  <div class="chip" id="cc2" style="left:100px;top:622px"><i></i>User control</div>
+  <div class="hl" id="cV1" style="top:400px;font-size:84px">Verification reduces errors.</div>
+  <div class="hl" id="cV2" style="top:510px;font-size:84px;color:var(--muted)">It doesn’t guarantee correctness.</div>
+  <div class="abs" id="cE" style="left:0;right:0;top:250px;text-align:center;opacity:0">
+    <div style="font-size:180px;font-weight:800;letter-spacing:-.05em;color:var(--blue);line-height:1">93.2%</div>
+    <div style="font-size:40px;font-weight:700;margin-top:12px">citation faithfulness</div>
+    <div style="font-size:26px;color:var(--muted);margin-top:16px">82 of 88 rewritten sentences supported across 18 real change requests</div>
+    <div style="font-size:26px;color:var(--body);margin-top:44px">Eval results and known limitations, public with the code</div>
+    <div class="mono" style="font-size:24px;color:var(--blue);margin-top:10px">github.com/radeshgovind-2005/meta-hyperlearn</div>
+  </div>
+  <div class="hl" id="cB" style="top:640px;font-size:44px;font-weight:600;color:var(--muted);letter-spacing:-.015em">Built during the Meta Global AI Developer Hackathon</div>
+  <div class="abs" id="endName" style="left:0;right:0;top:400px;text-align:center;font-size:48px;font-weight:700;letter-spacing:-.02em;opacity:0">Radesh Govind</div>
+  <div class="abs" id="endlinks" style="left:610px;top:500px;opacity:0">
+    <div><span>Live</span>hyperlearn.radesh-govind.com</div>
+    <div><span>Code</span>github.com/radeshgovind-2005/meta-hyperlearn</div>
+    <div><span>LinkedIn</span>linkedin.com/in/radesh-govind</div>
+  </div>
+  <div class="abs" id="endfoot" style="left:0;right:0;top:820px;text-align:center;opacity:0">
+    <div style="font-size:24px;color:var(--muted);font-weight:500">Built during the Meta Global AI Developer Hackathon</div>
+    <div style="display:flex;justify-content:center;align-items:center;gap:64px;margin-top:26px">
+      <img src="logos/meta.svg" style="height:40px">
+      <div style="display:flex;align-items:center;gap:12px;font-family:Inter,Figtree,sans-serif;font-size:30px;font-weight:600;letter-spacing:-.02em"><img src="logos/cv.svg" style="height:44px">Cerebral Valley</div>
+    </div>
+  </div>
+</div>
+
+<div id="logo"><img src="logos/logo-4x.png" alt="HyperLearn"></div>
+<div id="fade" class="abs" style="inset:0;background:#fff;opacity:0;z-index:9"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const E={out:x=>1-Math.pow(1-x,3),inOut:x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2,expo:x=>x>=1?1:1-Math.pow(2,-10*x),in:x=>x*x*x};
+const k=(t,a,b,e=E.out)=>t<=a?0:t>=b?1:e((t-a)/(b-a));
+const lerp=(a,b,p)=>a+(b-a)*p;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const mix=(c1,c2,p)=>{const h=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));const a=h(c1),b=h(c2);return `rgb(${a.map((v,i)=>Math.round(lerp(v,b[i],p))).join(',')})`};
+// piecewise linear [[x,y],...] with optional easing between knots
+const pw=(x,kn,e)=>{if(x<=kn[0][0])return kn[0][1];for(let i=1;i<kn.length;i++){if(x<=kn[i][0]){const p=(x-kn[i-1][0])/(kn[i][0]-kn[i-1][0]);return lerp(kn[i-1][1],kn[i][1],e?e(p):p)}}return kn.at(-1)[1]};
+const place=(el,o)=>{for(const p in o)el.style[p]=o[p]};
+const rise=(el,p,dy=24)=>place(el,{opacity:p,transform:`translateY(${(1-p)*dy}px)`});
+
+document.querySelectorAll('.hl,.hx').forEach(el=>{
+  const out=[];
+  el.childNodes.forEach(n=>{const cls=n.nodeType===1?n.className:'';n.textContent.split(/\s+/).filter(Boolean).forEach(w=>out.push(`<span class="w"><span class="wi ${cls}">${w}</span></span>`))});
+  el.innerHTML=out.join(' ');
+});
+function words(id,t,tin,tout,stag=.05){
+  const el=$(id);el.style.visibility=(t>=tin-.01&&(tout==null||t<tout+.6))?'visible':'hidden';
+  if(el.style.visibility==='hidden')return;
+  el.querySelectorAll('.wi').forEach((w,i)=>{
+    const p=k(t,tin+i*stag,tin+i*stag+.6,E.expo), q=tout==null?0:k(t,tout+i*.02,tout+i*.02+.4,E.inOut);
+    w.style.transform=`translateY(${(1-p)*108-q*108}%)`;w.style.opacity=Math.min(p,1-q);
+  });
+}
+// ---------- browser frames ----------
+const pend=[];
+function browser(parent,layers){
+  const el=document.createElement('div');el.className='bw';
+  el.innerHTML=`<div class="bar"><i></i><i></i><i></i><div class="url">hyperlearn.radesh-govind.com</div></div><div class="vp"><div class="zoom">${layers.map(s=>s.endsWith('.mp4')?`<video src="${s}" muted preload="auto" playsinline></video>`:`<img src="${s}">`).join('')}</div></div>`;
+  parent.appendChild(el);return {el,vp:el.querySelector('.vp'),zoom:el.querySelector('.zoom'),media:[...el.querySelector('.zoom').children]};
+}
+function setB(b,{x,y,w,op=1,L=0,t=0,s=1,ox=720,oy=450}){
+  const kk=w/1440;
+  place(b.el,{left:x+'px',top:y+'px',width:w+'px',opacity:op});
+  place(b.vp,{width:w+'px',height:900*kk+'px'});
+  ox=clamp(ox,720/s,1440-720/s);oy=clamp(oy,450/s,900-450/s);
+  b.zoom.style.transform=`scale(${kk}) translate(720px,450px) scale(${s}) translate(${-ox}px,${-oy}px)`;
+  b.media.forEach((m,i)=>m.style.visibility=i===L?'visible':'hidden');
+  const m=b.media[L];
+  if(op>0&&m.tagName==='VIDEO'){const d=m.duration||1e9;const tt=clamp(t,0,d-.04);if(Math.abs(m.currentTime-tt)>.0005){pend.push(new Promise(r=>m.addEventListener('seeked',r,{once:true})));m.currentTime=tt}}
+}
+const scenes=[['sc-sys',20.3,45.6],['sc-src',45.1,61.9],['sc-mut',61.4,82.0],['sc-ver',81.5,113.6],['sc-ada',113.0,136.5],['sc-shr',135.9,146.6],['sc-mod',146.0,179.2],['sc-cf',178.6,198.1],['sc-clo',197.5,1e9]];
+const sceneOp=(t,a,b)=>k(t,a,a+.45,E.inOut)*(1-k(t,b-.4,b,E.inOut));
+
+// ---------- intro ----------
+const pwrap=$('plotwrap');for(let i=0;i<36;i++){const im=new Image();im.src=`shots/plotseq/${String(i).padStart(2,'0')}.png`;pwrap.appendChild(im)}
+const ib=browser($('ibrowser'),['shots/cite0.png']);
+const g=$('grid').getContext('2d'),d=$('dots').getContext('2d');g.scale(2,2);d.scale(2,2);
+function rr(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);c.fill()}
+function drawGrid(t){g.clearRect(0,0,1920,1080);const op=k(t,0,.7)*(1-k(t,3.0,3.45,E.inOut));if(op<=0)return;
+  const pitch=64,s=22,shift=(t*38)%pitch,rate=t<1.97?1:1+1.6*k(t,1.97,2.6),ph=t*2.1+(t>1.97?(t-1.97)*1.4:0);
+  for(let j=-1;j<19;j++)for(let i=-1;i<32;i++){const x=i*pitch-shift+(j%2?pitch/2:0),y=j*pitch+12,dx=x+s/2-960,dy=y+s/2-540,dist=Math.sqrt(dx*dx/1.6+dy*dy*1.4);
+    const mask=Math.min(1,Math.max(0,(dist-260)/380));if(mask<=0)continue;const v=Math.sin(i*.73+j*1.31+ph)*Math.sin(i*.29-j*.47-ph*.8*rate),hot=Math.max(0,(v-.55)/.45);
+    g.globalAlpha=op*mask;g.fillStyle=hot>0?mix('#E9EDF1','#0A5CFF',Math.min(1,hot*1.2)):'#E9EDF1';const sc=1+hot*.25;rr(g,x+s/2-s*sc/2,y+s/2-s*sc/2,s*sc,s*sc,6)}g.globalAlpha=1}
+function drawDots(t){d.clearRect(0,0,1920,1080);const op=k(t,3.25,3.7)*(1-k(t,7.15,7.55,E.inOut));if(op<=0)return;const y=690;
+  d.globalAlpha=op;d.fillStyle='#E3E6EA';const off=(t*520)%60;for(let x=-60-off;x<1980;x+=60)rr(d,x,y-1.5,30,3,2);
+  const enter=1-k(t,3.25,4.0,E.expo);for(let j=0;j<6;j++){const x=900+j*74+enter*520+Math.sin(t*6+j)*3,yy=y+Math.sin(t*7+j*1.3)*4;d.fillStyle='#0A5CFF';d.beginPath();d.arc(x,yy,15,0,7);d.fill()}
+  const lag=k(t,4.3,7.0,E.in),col=k(t,4.0,5.9),lx=826+enter*520-lag*640,ly=y+Math.sin(t*7-1.3)*4*(1-col);
+  d.globalAlpha=op*(1-.65*k(t,5.7,7.0));d.fillStyle=mix('#0A5CFF','#B8C2CC',col);d.beginPath();d.arc(lx,ly,15,0,7);d.fill();d.globalAlpha=1}
+function intro(t){
+  const io=1-k(t,20.0,20.45,E.inOut); $('intro').style.display=t<20.5?'block':'none'; $('intro').style.opacity=io; if(t>=20.5)return;
+  drawGrid(t);drawDots(t);
+  words('h1',t,.05,1.72);words('h2',t,1.95,3.05);words('h3',t,3.40,7.05,.045);words('h4',t,5.62,7.05);words('h5',t,7.52,9.0);
+  const mIn=k(t,9.4,9.9,E.expo),mOut=k(t,10.4,10.7,E.inOut);place($('meet'),{opacity:mIn*(1-mOut),transform:`translateY(${(1-mIn)*24-mOut*20}px)`});
+  words('h6',t,11.0,13.0,.055);
+  const bIn=k(t,11.55,12.4,E.expo),bOut=k(t,13.0,13.4,E.inOut);
+  setB(ib,{x:240,y:lerp(1080,340,bIn)-(t-11.55)*22-bOut*160,w:1440,op:Math.min(1,bIn*1.5)*(1-bOut)});
+  const items=['i1','i2','i3'],act=[13.24,15.0,16.82];
+  items.forEach((id,i)=>{const p=k(t,13.2+i*.08,13.85+i*.08,E.expo),on=k(t,act[i]-.05,act[i]+.3)-(i<2?k(t,act[i+1]-.05,act[i+1]+.3):0);place($(id),{opacity:p,transform:`translateY(${(1-p)*40}px)`,color:mix('#C2CAD2','#1C2B33',on)})});
+  const it=items.map(id=>$(id)),pos=it.map(e=>[e.offsetTop,e.offsetHeight]),a1=k(t,14.95,15.4,E.inOut),a2=k(t,16.77,17.2,E.inOut);
+  place($('ibar'),{opacity:k(t,13.3,13.7),top:lerp(lerp(pos[0][0],pos[1][0],a1),pos[2][0],a2)+'px',height:lerp(lerp(pos[0][1],pos[1][1],a1),pos[2][1],a2)+'px'});
+  const cIn=k(t,13.15,13.9,E.expo);place($('icard'),{opacity:cIn,transform:`translateX(${(1-cIn)*120}px)`});
+  const pv=(a,c)=>{const i=k(t,a,a+.45,E.expo),o=c==null?0:k(t,c,c+.3,E.inOut);return [i*(1-o),i]};
+  const [o1,i1]=pv(13.2,14.95),[o2,i2]=pv(15.0,16.77),[o3,i3]=pv(16.82);
+  place($('p1'),{opacity:o1,transform:`scale(${lerp(.96,1,i1)+(t-13.2)*.012})`});place($('p2'),{opacity:o2,transform:`scale(${lerp(.96,1,i2)})`});place($('p3'),{opacity:o3,transform:`scale(${lerp(.96,1,i3)})`});
+  const fi=clamp(Math.floor((t-15.15)/1.35*35),0,35);[...pwrap.children].forEach((im,i)=>im.style.visibility=i===fi?'visible':'hidden');
+  const ins=k(t,17.75,18.35,E.expo);place($('ins'),{height:66*ins+'px',marginBottom:10*ins+'px',opacity:k(t,17.95,18.4),boxShadow:`0 0 0 ${3*k(t,18.3,18.7)}px rgba(161,77,0,.18)`});
+  const ch=k(t,18.55,19.0,E.expo);place($('ichip'),{opacity:ch,transform:`translateY(${(1-ch)*14}px)`});
+}
+// ---------- logo (persistent) ----------
+function logo(t){
+  const lIn=k(t,9.62,10.4,E.expo),mv=k(t,10.5,11.05,E.inOut);
+  const C=197.8, toC=k(t,C+18.1,C+18.9,E.inOut), up=k(t,C+23.5,C+24.3,E.inOut);
+  let w=lerp(980,200,mv),x=lerp(470,80,mv),y=lerp(452,58,mv);
+  w=lerp(w,900,toC);x=lerp(x,510,toC);y=lerp(y,400,toC);
+  w=lerp(w,640,up);x=lerp(x,640,up);y=lerp(y,200,up);
+  const hide=k(t,C+8.2,C+8.6)*(1-k(t,C+17.9,C+18.2)); // hidden over the full-screen statements
+  place($('logo'),{opacity:t<9.6?0:1-hide,width:w+'px',left:x+'px',top:y+'px',clipPath:`inset(-5% ${(1-lIn)*100}% -5% 0)`,transform:`translateY(${(1-lIn)*14}px)`});
+}
+// ---------- SYSTEM ----------
+const S=20.6;const bSys=browser($('sc-sys'),['cl/tour.mp4']);
+function sys(t){const l=t-S;
+  words('sysH',l,0.0,10.9,.06);
+  rise($('loopc'),k(l,.5,1.2,E.expo)*(1-k(l,10.9,11.3)));
+  [['lg',4.3],['lv',5.0],['lr',5.6]].forEach(([id,a])=>$(id).classList.toggle('on',l>=a&&l<10.9));
+  $('larc').style.strokeDashoffset=560*(1-k(l,6.0,6.8,E.inOut));$('lhead').style.opacity=k(l,6.7,6.8);
+  [6.94,8.13,9.3].forEach((a,i)=>{const p=k(l,a,a+.5,E.expo)*(1-k(l,10.9,11.3));rise($('pp'+i),p);$('pp'+i).classList.toggle('on',l>=a)});
+  const bi=k(l,.2,1.1,E.expo),bo=k(l,10.8,11.3,E.inOut);
+  setB(bSys,{x:760+(1-bi)*80-bo*80,y:170,w:1080,op:bi*(1-bo),t:6.2+l*0.95});
+  words('wfH',l,11.35,22.2,.06);
+  wfAnim(l);
+  words('wfP',l,22.55,null,.05);
+}
+// ---------- SOURCES ----------
+const SR=45.4;const bSrc=browser($('sc-src'),['cl/sources.mp4','shots/outline.png']);
+function src(t){const l=t-SR;
+  words('srcH1',l,0,5.0);words('srcH2',l,5.3,8.1);words('srcH3',l,8.4,null,.05);
+  [0.3,1.0,1.6,2.4,3.6].forEach((a,i)=>rise($('ft'+i),k(l,a,a+.5,E.expo)*(1-k(l,5.0,5.3))));
+  rise($('ct0'),k(l,12.1,12.6,E.expo));rise($('ct1'),k(l,13.6,14.1,E.expo));
+  const bi=k(l,0,.8,E.expo);
+  let L=0,ct=0,s=1,ox=720,oy=450;
+  if(l<5.1){ct=l*0.9}
+  else if(l<8.2){L=1;s=pw(l,[[5.1,1],[8.2,1.08]]);ox=600;oy=360}
+  else if(l<12.2){ct=pw(l,[[8.2,8.6],[12.2,13.4]]);s=pw(l,[[10.9,1],[11.7,1.9]],E.inOut);ox=pw(l,[[10.9,720],[11.7,1285]],E.inOut);oy=pw(l,[[10.9,450],[11.7,150]],E.inOut)}
+  else {ct=pw(l,[[12.2,17.4],[16.4,23.7]]);s=pw(l,[[12.2,1],[13.4,1],[14.2,1.8]],E.inOut);ox=pw(l,[[13.4,720],[14.2,1290]],E.inOut);oy=pw(l,[[13.4,450],[14.2,250]],E.inOut)}
+  setB(bSrc,{x:600+(1-bi)*80,y:150,w:1220,op:bi,L,t:ct,s,ox,oy});
+}
+// ---------- MUTATE ----------
+const MU=61.7;const bMut=browser($('sc-mut'),['cl/mutate.mp4']);
+const BL=[['figure','Picture · Muse Image','u'],['text','','u'],['text','b_8y2dn3nhn3','c','replace'],['widget','plot · inserted','c','insertAfter'],['text','','u'],['text','','u'],['widget','','u'],['text','','u'],['exercise','exam style','u']];
+BL.forEach((b,i)=>{const el=document.createElement('div');el.className='blk';el.id='blk'+i;el.innerHTML=`<span class="k">${b[0]}</span><span class="id mono">${b[1]}</span><span class="tg ${b[2]}">${b[3]||'unchanged'}</span>`;$('sc-mut').appendChild(el)});
+function mut(t){const l=t-MU;
+  const ct=pw(l,[[0,.6],[2.6,3.7],[7.0,8.6],[11.5,72.0],[19.5,80.0]]);
+  const side=k(l,11.6,12.5,E.inOut);
+  setB(bMut,{x:lerp(240,760,side),y:lerp(100,170,side),w:lerp(1440,1080,side),op:k(l,0,.5),t:ct});
+  $('mSpeed').style.opacity=k(l,7.0,7.3)*(1-k(l,11.3,11.5));place($('mSpeed'),{left:'1480px'});
+  rise($('pipe'),k(l,3.6,4.1,E.expo)*(1-k(l,11.3,11.7)));
+  [4.0,6.4,8.6].forEach((a,i)=>{const c=$('pc'+i);c.style.opacity=k(l,a-.1,a+.3);c.classList.toggle('on',l>=a)});
+  words('mH',l,12.0,null,.06);$('mZ').style.opacity=k(l,12.4,12.9);
+  let y=350;BL.forEach((b,i)=>{const el=$('blk'+i);let h=52,op=k(l,12.2+i*.06,12.7+i*.06);
+    if(i===3){const g=k(l,14.6,15.2,E.expo);h=52*g;op*=g}
+    place(el,{top:y+'px',height:h+'px',opacity:op,borderColor:b[2]==='c'&&l>=(i===2?13.4:14.6)?'#0A5CFF':'#E3E6EA',background:b[2]==='c'&&l>=(i===2?13.4:14.6)?'#F5F8FF':'#fff'});
+    const tg=el.querySelector('.tg');tg.style.opacity=b[2]==='c'?k(l,i===2?13.4:14.8,(i===2?13.4:14.8)+.3):k(l,17.1+i*.07,17.4+i*.07);
+    y+=h+(i===3?10*k(l,14.6,15.2):10)});
+}
+// ---------- VERIFY ----------
+const VE=81.8;const bVer=browser($('sc-ver'),['cl/mutate.mp4']);
+function ver(t){const l=t-VE;
+  words('vH',l,0,3.9,.05);
+  const lo=k(l,3.9,4.3,E.inOut);
+  [['vG',.2],['vV',.45],['vS',.7],['vR',.95]].forEach(([id,a])=>{const p=k(l,a,a+.5,E.expo)*(1-lo);place($(id),{opacity:p,transform:`scale(${lerp(.92,1,p)})`})});
+  ['va1','va2','va3','va4'].forEach((id,i)=>$(id).style.opacity=k(l,.8+i*.15,1.2+i*.15)*(1-lo));
+  // dot runs Generate -> Verify -> Repair -> Generate -> Verify -> Save
+  const P=[[600,500],[740,500],[960,548],[960,644],[840,690],[480,556],[600,500],[740,500],[1100,500],[1240,500]],T=[1.4,1.7,1.9,2.15,2.3,2.7,2.85,3.1,3.35,3.6];
+  let dx=-50,dy=-50;if(l>1.4&&l<3.9){for(let i=1;i<P.length;i++)if(l<=T[i]){const p=(l-T[i-1])/(T[i]-T[i-1]);dx=lerp(P[i-1][0],P[i][0],p);dy=lerp(P[i-1][1],P[i][1],p);break}if(l>3.6){dx=1240;dy=500}}
+  $('vdot').setAttribute('cx',dx);$('vdot').setAttribute('cy',dy);$('vdot').style.opacity=1-lo;
+  $('vV').classList.toggle('on',l>1.7&&l<3.9);
+  // checks + live footage
+  words('vH2',l,4.3,17.7,.05);
+  [4.41,8.12,12.51,15.2].forEach((a,i)=>{const p=k(l,a,a+.5,E.expo)*(1-k(l,17.8,18.2));rise($('ck'+i),p)});
+  const bi=k(l,4.3,5.0,E.expo),bo=k(l,17.7,18.1,E.inOut);
+  let ct,s=1,ox=720,oy=450;
+  if(l<9.2){ct=pw(l,[[4.4,76.2],[9.2,81.0]]);s=pw(l,[[4.4,1.15],[5.4,1.45]],E.inOut);ox=690;oy=pw(l,[[4.4,600],[5.4,690]],E.inOut)}
+  else {ct=pw(l,[[9.2,81.0],[17.8,89.6]]);s=pw(l,[[9.2,1.45],[10.4,1],[11.2,2.0]],E.inOut);ox=pw(l,[[9.2,690],[10.4,720],[11.2,1300]],E.inOut);oy=pw(l,[[9.2,690],[10.4,450],[11.2,300],[17.8,340]],E.inOut)}
+  if(l<25)setB(bVer,{x:800+(1-bi)*80,y:170,w:1020,op:bi*(1-bo),t:ct,s,ox,oy});
+  // repair loop
+  words('vH3',l,18.1,24.5,.05);
+  [18.3,18.8,19.3,19.7,20.1].forEach((a,i)=>{const p=k(l,a,a+.4,E.expo)*(1-k(l,24.4,24.8));place($('rp'+i),{opacity:p,transform:`translateY(${(1-p)*20}px)`})});
+  rise($('rq0'),k(l,20.75,21.3,E.expo)*(1-k(l,24.4,24.8)));rise($('rq1'),k(l,22.6,23.1,E.expo)*(1-k(l,24.4,24.8)));
+  // storage
+  words('vH4',l,25.0,null,.05);
+  [25.3,26.4,28.9].forEach((a,i)=>rise($('st'+i),k(l,a,a+.5,E.expo)));
+  if(l>=24.6){const p=k(l,24.9,25.6,E.expo);setB(bVer,{x:800+(1-p)*80,y:170,w:1020,op:p,t:pw(l,[[25.0,88.6],[30.9,94.5]]),s:pw(l,[[25,1],[26.6,1],[27.2,1.5]],E.inOut),ox:pw(l,[[26.6,720],[27.2,560]],E.inOut),oy:pw(l,[[26.6,450],[27.2,560]],E.inOut)})}
+}
+// ---------- ADAPT ----------
+const AD=113.3;const bAda=browser($('sc-ada'),['cl/practice.mp4']);
+function ada(t){const l=t-AD;
+  const ct=pw(l,[[0,0],[3.4,3.4],[5.9,7.6],[16.2,138.9],[22.6,145.4]]);
+  const s=pw(l,[[0,1],[4.4,1],[5.0,1.6],[6.4,1.6],[7.2,2.0],[18.9,2.0],[19.8,1.7]],E.inOut);
+  const ox=pw(l,[[4.4,720],[5.0,600],[6.4,600],[7.2,1290],[18.9,1290],[19.8,600]],E.inOut);
+  const oy=pw(l,[[4.4,450],[5.0,420],[6.4,420],[7.2,330],[18.9,330],[19.8,650]],E.inOut);
+  setB(bAda,{x:240,y:100,w:1440,op:k(l,0,.5),t:ct,s,ox,oy});
+  $('aSpeed').style.opacity=k(l,5.9,6.2)*(1-k(l,15.9,16.2));
+  rise($('am0'),k(l,9.87,10.4,E.expo));rise($('am1'),k(l,12.57,13.1,E.expo));
+  const hide=k(l,19.0,19.4);$('am0').style.opacity*=1-hide;$('am1').style.opacity*=1-hide;
+}
+// ---------- SHARE ----------
+const SH=136.2;const bShr=browser($('sc-shr'),['cl/share.mp4']);
+function shr(t){const l=t-SH;
+  const ct=pw(l,[[0,0],[2.5,1.5],[6.0,3.4],[7.85,3.45],[9.6,5.7],[10.4,6.1]]);
+  setB(bShr,{x:240,y:100,w:1440,op:k(l,0,.5),t:ct,s:pw(l,[[2.4,1],[3.3,1.55]],E.inOut),ox:pw(l,[[2.4,720],[3.3,720]]),oy:pw(l,[[2.4,450],[3.3,320]],E.inOut)});
+}
+// ---------- MODELS ----------
+const MO=146.3;
+const wv=$('wave');wv.style.background='#F6F7F9';wv.innerHTML=Array.from({length:26},(_,i)=>`<i style="position:absolute;left:${14+i*7.4}px;width:4px;border-radius:2px;background:#0A5CFF;top:50%"></i>`).join('');
+function mod(t){const l=t-MO;
+  words('moH',l,0,null,.06);
+  const on=[[6.23,15.68],[15.68,18.62],[18.62,22.0],[22.0,24.93],[24.93,28.6],[28.6,99]];
+  on.forEach(([a,b],i)=>{const el=$('mc'+i),p=k(l,.4+i*.12,1.0+i*.12,E.expo),act=l>=a&&l<b,was=l>=a;
+    place(el,{opacity:p*(act?1:was?.75:.55),transform:`translateY(${(1-p)*30}px) scale(${act?1.02:1})`,borderColor:act?'#0A5CFF':'#E3E6EA',boxShadow:act?'0 24px 60px rgba(10,92,255,.12)':'none'})});
+  const jt=[[7.9,9.8,11.5,12.3,14.5],[16.4],[19.3],[22.6],[25.6],[28.9,30.4]];
+  jt.forEach((ts,i)=>$('mc'+i).querySelectorAll('.jobs span').forEach((s,j)=>s.classList.toggle('on',l>=ts[j])));
+  [...wv.children].forEach((b,i)=>{const h=l>=28.6?10+40*Math.abs(Math.sin(l*7+i*1.7)*Math.sin(l*3.1+i*.6)):8;b.style.height=h+'px';b.style.marginTop=-h/2+'px'});
+}
+// ---------- CLOUDFLARE ----------
+const CF=178.9;
+const NODES=['br','wk','meta','ai','wf','do','d1','r2','vz','bx'];
+const cen=id=>{const e=$('an-'+id);return [e.offsetLeft,e.offsetTop,e.offsetWidth,e.offsetHeight]};
+const svg=$('cfsvg');const links=[['br','wk','h'],['wk','meta','v'],['wk','ai','v'],...['wf','do','d1','r2','vz','bx'].map(n=>['wk',n,'r'])];let linked=false;
+const buildLinks=()=>links.forEach(([a,b,m])=>{const [ax,ay,aw,ah]=cen(a),[bx,by,bw,bh]=cen(b);let dd;
+  if(m==='h')dd=`M${ax+aw} ${ay+ah/2} L${bx} ${by+bh/2}`;else if(m==='v')dd=by<ay?`M${ax+aw/2} ${ay} L${bx+bw/2} ${by+bh}`:`M${ax+aw/2} ${ay+ah} L${bx+bw/2} ${by}`;
+  else dd=`M${ax+aw} ${ay+ah/2} C ${ax+aw+130} ${ay+ah/2}, ${bx-130} ${by+bh/2}, ${bx} ${by+bh/2}`;
+  const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',dd);p.setAttribute('fill','none');p.setAttribute('stroke-width','2.5');p.id='ln-'+b;svg.appendChild(p)});
+function cf(t){const l=t-CF;if(!linked){buildLinks();linked=true}
+  words('cfH',l,0,null,.06);
+  const hi={wk:2.41,wf:4.3,do:6.8,d1:9.68,r2:10.25,vz:10.9,bx:15.48};
+  NODES.forEach((n,i)=>{const el=$('an-'+n),p=k(l,.3+i*.06,.9+i*.06,E.expo),on=hi[n]!=null&&l>=hi[n],cur=hi[n]!=null&&l>=hi[n]&&l<hi[n]+1.8;
+    place(el,{opacity:p*(on||n==='br'?1:.6),transform:`scale(${cur?1.03:1})`});el.classList.toggle('on',on)});
+  links.forEach(([a,b])=>{const p=$('ln-'+b);const on=hi[b]!=null?l>=hi[b]:b==='wk'?l>=2.41:false;p.setAttribute('stroke',on?'#0A5CFF':'#D4D9DE');p.style.opacity=k(l,.8,1.4)})}
+// ---------- CLOSING ----------
+const CL=197.8;const bClo=browser($('sc-clo'),['cl/tour.mp4']);
+function clo(t){const l=t-CL;
+  words('cH',l,0,8.2,.06);
+  [3.44,6.6,7.6].forEach((a,i)=>{const p=k(l,a,a+.5,E.expo)*(1-k(l,8.2,8.5));rise($('cc'+i),p);$('cc'+i).classList.toggle('on',true)});
+  const bi=k(l,0,.7,E.expo),bo=k(l,8.1,8.5,E.inOut);setB(bClo,{x:760+(1-bi)*80,y:170,w:1080,op:bi*(1-bo),t:12+l*.9});
+  words('cV1',l,8.85,12.9,.05);words('cV2',l,11.2,12.9,.05);
+  const e=k(l,13.3,13.9,E.expo)*(1-k(l,17.6,18.0));rise($('cE'),e,30);
+  words('cB',l,20.1,23.4,.04);
+  rise($('endName'),k(l,24.0,24.6,E.expo));rise($('endlinks'),k(l,24.4,25.0,E.expo));rise($('endfoot'),k(l,25.0,25.6,E.expo));
+}
+function render(t){
+  intro(t);logo(t);
+  const fns={'sc-sys':sys,'sc-src':src,'sc-mut':mut,'sc-ver':ver,'sc-ada':ada,'sc-shr':shr,'sc-mod':mod,'sc-cf':cf,'sc-clo':clo};
+  for(const [id,a,b] of scenes){const el=$(id),on=t>=a&&t<b;el.style.display=on?'block':'none';if(on){el.style.opacity=sceneOp(t,a,b);fns[id](t)}}
+  $('fade').style.opacity=k(t,228.2,228.8,E.inOut);
+}
+window.DUR=228.8;
+window.seek=async t=>{pend.length=0;render(t);await Promise.all(pend)};
+window.ready=Promise.all([document.fonts.ready,...[...document.images].map(i=>i.decode().catch(()=>{})),...[...document.querySelectorAll('video')].map(v=>v.readyState>=2?0:new Promise(r=>v.addEventListener('loadeddata',r,{once:true})))]);
+window.ready.then(()=>seek(+(location.hash.slice(1)||0)));
+</script>
+<script src="workflows.js"></script></body></html>

@@ -1,0 +1,51 @@
+1
+00:00:00,300 --> 00:00:02,000
+The world never stops.
+
+2
+00:00:02,020 --> 00:00:03,550
+It keeps changing.
+
+3
+00:00:03,700 --> 00:00:07,030
+Those who don't learn to adapt risk being left behind.
+
+4
+00:00:07,050 --> 00:00:08,740
+Don't let that happen to you.
+
+5
+00:00:08,800 --> 00:00:10,290
+Meet HyperLearn.
+
+6
+00:00:10,450 --> 00:00:11,430
+Your material.
+
+7
+00:00:11,450 --> 00:00:12,900
+Your learning path.
+
+8
+00:00:13,150 --> 00:00:16,060
+Agents generate, verify, and repair.
+
+9
+00:00:16,150 --> 00:00:17,770
+Simplify an explanation.
+
+10
+00:00:17,790 --> 00:00:20,110
+Explore an interactive example.
+
+11
+00:00:20,300 --> 00:00:25,240
+Practice, adapt your path, and share it with a friend, a colleague, or your students.
+
+12
+00:00:26,200 --> 00:00:27,060
+HyperLearn.
+
+13
+00:00:27,080 --> 00:00:29,160
+Keep learning, your way.

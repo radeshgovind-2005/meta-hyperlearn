@@ -1,0 +1,218 @@
+{
+ "voice": "wyman",
+ "lines": [
+  {
+   "id": "v1",
+   "text": "The world never stops. It keeps changing.",
+   "start": 0.3,
+   "end": 3.35,
+   "dur": 3.05,
+   "parts": [
+    [
+     0,
+     "The world never stops."
+    ],
+    [
+     1.72,
+     "It keeps changing."
+    ]
+   ]
+  },
+  {
+   "id": "v2",
+   "text": "Those who don't learn to adapt risk being left behind.",
+   "start": 3.7,
+   "end": 6.83,
+   "dur": 3.13,
+   "parts": [
+    [
+     0,
+     "Those who don't learn to adapt risk being left behind."
+    ]
+   ]
+  },
+  {
+   "id": "v3",
+   "text": "Don't let that happen to you.",
+   "start": 7.05,
+   "end": 8.54,
+   "dur": 1.49,
+   "parts": [
+    [
+     0,
+     "Don't let that happen to you."
+    ]
+   ]
+  },
+  {
+   "id": "v4",
+   "text": "Meet HyperLearn.",
+   "start": 8.8,
+   "end": 10.09,
+   "dur": 1.29,
+   "parts": [
+    [
+     0,
+     "Meet HyperLearn."
+    ]
+   ]
+  },
+  {
+   "id": "v5",
+   "text": "Your material. Your learning path.",
+   "start": 10.45,
+   "end": 12.7,
+   "dur": 2.25,
+   "parts": [
+    [
+     0,
+     "Your material."
+    ],
+    [
+     1,
+     "Your learning path."
+    ]
+   ]
+  },
+  {
+   "id": "v6",
+   "text": "Agents generate, verify, and repair.",
+   "start": 13.15,
+   "end": 15.86,
+   "dur": 2.71,
+   "parts": [
+    [
+     0,
+     "Agents generate, verify, and repair."
+    ]
+   ]
+  },
+  {
+   "id": "v7",
+   "text": "Simplify an explanation. Explore an interactive example.",
+   "start": 16.15,
+   "end": 19.91,
+   "dur": 3.76,
+   "parts": [
+    [
+     0,
+     "Simplify an explanation."
+    ],
+    [
+     1.64,
+     "Explore an interactive example."
+    ]
+   ]
+  },
+  {
+   "id": "v8",
+   "text": "Practice, adapt your path, and share it with a friend, a colleague, or your students.",
+   "start": 20.3,
+   "end": 25.04,
+   "dur": 4.74,
+   "parts": [
+    [
+     0,
+     "Practice, adapt your path, and share it with a friend, a colleague, or your students."
+    ]
+   ]
+  },
+  {
+   "id": "v9",
+   "text": "HyperLearn. Keep learning, your way.",
+   "start": 26.2,
+   "end": 28.96,
+   "dur": 2.76,
+   "parts": [
+    [
+     0,
+     "HyperLearn."
+    ],
+    [
+     0.88,
+     "Keep learning, your way."
+    ]
+   ]
+  }
+ ],
+ "cues": [
+  {
+   "line": "v1",
+   "text": "The world never stops.",
+   "start": 0.3,
+   "end": 1.97
+  },
+  {
+   "line": "v1",
+   "text": "It keeps changing.",
+   "start": 2.02,
+   "end": 3.35
+  },
+  {
+   "line": "v2",
+   "text": "Those who don't learn to adapt risk being left behind.",
+   "start": 3.7,
+   "end": 6.83
+  },
+  {
+   "line": "v3",
+   "text": "Don't let that happen to you.",
+   "start": 7.05,
+   "end": 8.54
+  },
+  {
+   "line": "v4",
+   "text": "Meet HyperLearn.",
+   "start": 8.8,
+   "end": 10.09
+  },
+  {
+   "line": "v5",
+   "text": "Your material.",
+   "start": 10.45,
+   "end": 11.4
+  },
+  {
+   "line": "v5",
+   "text": "Your learning path.",
+   "start": 11.45,
+   "end": 12.7
+  },
+  {
+   "line": "v6",
+   "text": "Agents generate, verify, and repair.",
+   "start": 13.15,
+   "end": 15.86
+  },
+  {
+   "line": "v7",
+   "text": "Simplify an explanation.",
+   "start": 16.15,
+   "end": 17.74
+  },
+  {
+   "line": "v7",
+   "text": "Explore an interactive example.",
+   "start": 17.79,
+   "end": 19.91
+  },
+  {
+   "line": "v8",
+   "text": "Practice, adapt your path, and share it with a friend, a colleague, or your students.",
+   "start": 20.3,
+   "end": 25.04
+  },
+  {
+   "line": "v9",
+   "text": "HyperLearn.",
+   "start": 26.2,
+   "end": 27.03
+  },
+  {
+   "line": "v9",
+   "text": "Keep learning, your way.",
+   "start": 27.08,
+   "end": 28.96
+  }
+ ]
+}

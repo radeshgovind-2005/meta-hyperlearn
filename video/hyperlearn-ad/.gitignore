@@ -1,0 +1,5 @@
+node_modules
+.venv
+cache
+out/*.mov
+out/frames

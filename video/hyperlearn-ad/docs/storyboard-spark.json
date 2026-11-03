@@ -1,0 +1,158 @@
+{
+  "artDirection": {
+    "avoid": [
+      "raster text, letters, numbers, logos, UI, brand marks, diagrams, globe",
+      "neon, glowing brains, robots, particles, glass gradients",
+      "humiliation, inferiority, racing or comparison between learners",
+      "ground shadows or props touching frame edge",
+      "claims of guaranteed correctness, proven gains, or Meta endorsement"
+    ],
+    "illustrationStyle": "flat geometric illustration with soft rounded shapes, warm human confident, restrained matte fills",
+    "lighting": "flat even daylight, matte fills, no shadows, no glow, clean key on pure white",
+    "motionPrinciples": [
+      "one continuous thread: orbit rings unroll into routes into HyperLearn mark into citation connector into agent graph into share branches",
+      "SVG-only motion: orthographic rotation, stroke draw-on, dash pulse, parallax truck, no zoom-only shots",
+      "character cut-outs only translate and bob, no rigging",
+      "nodes light in order, repair loop drawn as possibility only",
+      "editorial cuts labelled Sped up where time is compressed"
+    ],
+    "palette": [
+      "#0A5CFF",
+      "#1C2B33",
+      "#3E4C59",
+      "#5B6B7A",
+      "#E3E6EA",
+      "#F6F7F9",
+      "#FFF3BF",
+      "#0A7A3D",
+      "#FFFFFF"
+    ],
+    "perspective": "eye-level orthographic, front three-quarter characters at same scale, left-to-right path reading on white plane",
+    "summary": "Warm, human, confident flat geometric system. Vector builds globe, orbits, paths, mark, graph and text. Raster provides only four keyed character cut-outs. A temporary thoughtful pause, never humiliation."
+  },
+  "characters": [
+    {
+      "appearance": "Early-20s South Asian woman, long dark ponytail, teal overshirt over white tee, straight jeans, white sneakers, canvas backpack; warm confident expression",
+      "id": "student",
+      "role": "university student"
+    },
+    {
+      "appearance": "Mid-40s Black man, short beard, ochre button shirt over gray tee, dark trousers, brown shoes; calm assured retraining worker",
+      "id": "worker",
+      "role": "mid-career worker retraining"
+    },
+    {
+      "appearance": "Late-30s Latina woman, wavy shoulder-length brown hair, rust cardigan over navy dress, leggings, flats, tote bag; kind authoritative",
+      "id": "teacher",
+      "role": "teacher"
+    },
+    {
+      "appearance": "Late-teens East Asian young man, short black hair, glasses, mustard hoodie, khaki joggers, sneakers; curious self-taught learner",
+      "id": "learner",
+      "role": "younger self-taught learner"
+    }
+  ],
+  "imagePrompts": [
+    {
+      "id": "lineup-sheet",
+      "prompt": "Warm human confident flat geometric illustration with soft rounded shapes on flat pure-white background, restrained and friendly. All four characters standing evenly spaced in one line at same scale, front three-quarter view, generous white margin, full-body, no ground shadow, no props touching frame edge, no text letters numbers logos UI brand marks diagrams globe, flat even lighting.",
+      "purpose": "lineup sheet for scale and palette match, keyed over vector scene",
+      "size": "2048x1024"
+    },
+    {
+      "id": "student-walk",
+      "prompt": "Warm human confident flat geometric illustration with soft rounded shapes on flat pure-white background, restrained and friendly. Full-body South Asian female university student in teal overshirt white tee jeans sneakers backpack, mid-stride walking forward facing right, upright confident, centered generous white margin, no ground shadow, no props touching frame edge, no text letters numbers logos UI, flat even lighting.",
+      "purpose": "student walking cut-out for path sequence",
+      "size": "1024x1536"
+    },
+    {
+      "id": "worker-walk",
+      "prompt": "Warm human confident flat geometric illustration with soft rounded shapes on flat pure-white background, restrained and friendly. Full-body mid-40s Black man with short beard in ochre shirt gray tee dark trousers, mid-stride walking forward facing right, calm assured, centered generous white margin, no ground shadow, no props touching frame edge, no text letters numbers logos UI, flat even lighting.",
+      "purpose": "worker walking cut-out for path sequence",
+      "size": "1024x1536"
+    },
+    {
+      "id": "teacher-walk",
+      "prompt": "Warm human confident flat geometric illustration with soft rounded shapes on flat pure-white background, restrained and friendly. Full-body late-30s Latina woman in rust cardigan navy dress flats tote bag, mid-stride walking forward facing right, kind assured, centered generous white margin, no ground shadow, no props touching frame edge, no text letters numbers logos UI, flat even lighting.",
+      "purpose": "teacher walking cut-out for path sequence",
+      "size": "1024x1536"
+    },
+    {
+      "id": "learner-walk",
+      "prompt": "Warm human confident flat geometric illustration with soft rounded shapes on flat pure-white background, restrained and friendly. Full-body late-teens East Asian young man with glasses in mustard hoodie joggers sneakers, mid-stride walking forward facing right, curious upbeat, centered generous white margin, no ground shadow, no props touching frame edge, no text letters numbers logos UI, flat even lighting.",
+      "purpose": "learner walking cut-out for path sequence",
+      "size": "1024x1536"
+    },
+    {
+      "id": "student-pause",
+      "prompt": "Warm human confident flat geometric illustration with soft rounded shapes on flat pure-white background, restrained and friendly. Full-body South Asian female university student in teal overshirt jeans backpack, standing paused looking ahead to the right thoughtful hand relaxed, upright not defeated, temporary pause in progress, centered generous white margin, no ground shadow, no text letters numbers logos UI, flat even lighting.",
+      "purpose": "student paused thoughtful cut-out at dashed gap, held pose",
+      "size": "1024x1536"
+    }
+  ],
+  "storyboard": [
+    {
+      "end": 4,
+      "motion": "SVG orthographic globe spins continuously; rings precess slightly; chips crossfade on behind-globe pass; character layers bob via React translate; parallax between layers, no zoom",
+      "onScreenText": "",
+      "risk": "Avoid tech-over-human; people stay foreground, tools stay as small chips",
+      "sound": "VO: \"The world never stops. It keeps changing.\" Low pulse per chip swap; soft pad enters.",
+      "start": 0,
+      "visual": "Vector globe centered: blue continents, white ocean, hairline graticule. Three tilted vector orbit rings with circular chips riding (book to tablet, compass to map pin, wrench to chip). Four keyed character cut-outs in loose arc foreground with idle bob."
+    },
+    {
+      "end": 8,
+      "motion": "SVG rings flatten and unroll into three routes left-to-right; camera trucks right with routes on student pause; dashed gap ends pulse once on VO line",
+      "onScreenText": "",
+      "risk": "Avoid humiliation or race; separate routes, upright thoughtful pause, others continue on own paths",
+      "sound": "VO: \"Those who don't learn to adapt risk being left behind. Don't let that happen to you.\" Pad thins to single held note.",
+      "start": 4,
+      "visual": "Orbits become white-plane routes: curve, stair-step, gentle wave. Worker, teacher, learner walk own routes. Student reaches dashed gap and pauses thoughtful, not defeated."
+    },
+    {
+      "end": 10,
+      "motion": "Stroke draw-on across gap into node, two bars rise and snap to mark; dots slide vertically into outline capture; single node pulse",
+      "onScreenText": "Meet HyperLearn + course outline: Lecture 6 / Lecture 7",
+      "risk": "Keep mark as vector reveal, not raster; no extra claims",
+      "sound": "VO: \"Meet HyperLearn.\" Clear reveal tone, soft click per section.",
+      "start": 8,
+      "visual": "Vector curve with node bridges gap, two rounded bars rise to form HyperLearn path-node-bars mark then wordmark. Route dots stack into course outline column."
+    },
+    {
+      "end": 15,
+      "motion": "Floating crop of real UI with blue SVG connector line from citation marker to yellow source highlight; typing animation for request; orbit line re-used as connector",
+      "onScreenText": "Change this / This is too complex. Simplify it and give me an interactive example.",
+      "risk": "Show only real source-cited flow with yellow highlight; no correctness guarantee",
+      "sound": "VO: \"Your material. Your learning path.\" Light tick on citation click.",
+      "start": 10,
+      "visual": "Real app crop: reader paragraph with citation marker to source pane PDF region highlighted #FFF3BF. Paragraph selected, typed request for simplification and interactive example."
+    },
+    {
+      "end": 21,
+      "motion": "Selected paragraph scales into node; nodes light in order, parallel branches together; Repair dashed loop draws as possibility; evidence line draws from source thumbnail to Verify; cut back to real simplified paragraph and draggable widget",
+      "onScreenText": "LangGraph / Generate -> Verify -> Repair / Source-linked - Versioned - Reversible / if a check fails - max 2 / sentences vs cited source / widget claims recomputed (mathjs) / browser run",
+      "risk": "State verifier as hosted Muse Spark, not open weights; repair as possibility, never failure of this run; no guaranteed correctness",
+      "sound": "VO: \"Agents generate, verify, and repair. Simplify an explanation. Explore an interactive example.\" Soft accents per node, restrained confirmation on Save.",
+      "start": 15,
+      "visual": "Vector graph: Context to parallel Text and Widget to Verify to Save, dashed Repair loop to writers. Source thumbnail feeds Verify. Verifier labelled hosted Muse Spark. Real footage: simplified paragraph with green changed edge and plot widget dragged."
+    },
+    {
+      "end": 26,
+      "motion": "Editorial cuts between genuine states labelled Sped up; branch lines draw from app path to three character cut-outs off-frame",
+      "onScreenText": "Not quite + correct version / We adjusted your course - Keep / Undo / Follow your course / Make their own copy / Sped up",
+      "risk": "Show mutations save automatically with Undo and adapt offers Keep / Undo; no learning-gains claim",
+      "sound": "VO: \"Practice, adapt your path, and share it with a friend, a colleague, or your students.\" Three light branch accents.",
+      "start": 21,
+      "visual": "Real practice result Not quite with correct version, then We adjusted your course with Keep / Undo. Real Share dialog. Course path branches to friend, colleague, students."
+    },
+    {
+      "end": 30,
+      "motion": "All settles centered; one last node pulse on logo; hold",
+      "onScreenText": "HyperLearn / Keep learning, your way. / hyperlearn.radesh-govind.com / Try it - Explore the code / radeshgovind-2005/meta-hyperlearn / Built during the Meta Global AI Developer Hackathon / Built with Meta AI - Powered by Cloudflare",
+      "risk": "Credit hackathon without implying Meta endorsement; no extra promises",
+      "sound": "VO: \"HyperLearn. Keep learning, your way.\" Resolve chord, fade.",
+      "start": 26,
+      "visual": "End card vector: HyperLearn logo path-node-bars, tagline, URL, code links, hackathon credit, all as clean vector type."
+    }
+  ]
+}

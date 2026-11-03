@@ -13,3 +13,14 @@ seed/build
 .env
 .secrets.json
 eval-result.json
+
+# Local video renders, recording frames, caches and Python environment
+video/rec/
+video/stills/
+video/*.mp4
+video/hyperlearn-ad/.venv/
+video/hyperlearn-ad/cache/
+video/hyperlearn-ad/out/
+video/hyperlearn-ad/audio/mix*.wav
+video/hyperlearn-ad/audio/stems-*.wav
+__pycache__/

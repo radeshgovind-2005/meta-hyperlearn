@@ -6,6 +6,10 @@
 
 Live: **https://hyperlearn.radesh-govind.com** (sign in, then open the sample course; demo mode needs no API key)
 
+[![Watch the 30-second HyperLearn film](video/hyperlearn-ad/deliverables/hyperlearn-ad-thumbnail-h.jpg)](https://github.com/radeshgovind-2005/meta-hyperlearn/blob/main/video/hyperlearn-ad/deliverables/hyperlearn-ad-4k.mp4)
+
+**[Watch the 30-second film](https://github.com/radeshgovind-2005/meta-hyperlearn/blob/main/video/hyperlearn-ad/deliverables/hyperlearn-ad-4k.mp4)** · [Vertical version](video/hyperlearn-ad/deliverables/hyperlearn-ad-vertical-4k.mp4) · [Captions](video/hyperlearn-ad/deliverables/hyperlearn-ad.srt) · [Film source and credits](video/hyperlearn-ad/README.md)
+
 HyperLearn turns a student's own material into a course:
 
 - **Every sentence is cited.** Click a citation and the source pane shows the exact page with the region highlighted, or plays the lecture recording from that second.

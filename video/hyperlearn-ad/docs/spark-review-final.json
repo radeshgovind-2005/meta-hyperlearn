@@ -1,0 +1,75 @@
+{
+  "issues": [
+    {
+      "fix": "Remove drawn arrow; show only native cursor click and the app's own highlight.",
+      "orientation": "both",
+      "problem": "12.50: thick blue curved arrow drawn over genuine app footage misrepresents the UI.",
+      "severity": "high",
+      "time": "12.50"
+    },
+    {
+      "fix": "Reframe vertical crop to fit full title and formula pane; do not slice text.",
+      "orientation": "9:16",
+      "problem": "11.50: title cropped to 'inants with a Variable', formula cut off.",
+      "severity": "high",
+      "time": "11.50"
+    },
+    {
+      "fix": "Punch-in to graph only, enlarge all node labels to readable size and hold.",
+      "orientation": "16:9",
+      "problem": "16.50: Context/Text/Widget/Verify/Save graph and check-list illegibly small.",
+      "severity": "high",
+      "time": "16.50"
+    },
+    {
+      "fix": "Replace full-screen with punched-in single pane for each beat.",
+      "orientation": "16:9",
+      "problem": "10.50-13.50: course outline, citation popover and math text unreadable at full width.",
+      "severity": "high",
+      "time": "11.50"
+    },
+    {
+      "fix": "Make URL hero-size in brand blue, raise credit to min 18px with 4.5:1 contrast or remove.",
+      "orientation": "both",
+      "problem": "28.50: end-card URL and hackathon credit tiny and washed out.",
+      "severity": "medium",
+      "time": "28.50"
+    },
+    {
+      "fix": "Shift paths inward so all walkers stay fully in frame.",
+      "orientation": "16:9",
+      "problem": "8.50: walkers sliced in half at right edge, only leg/torso visible.",
+      "severity": "medium",
+      "time": "8.50"
+    },
+    {
+      "fix": "Add morph where blue gap-lines form the H-mark before wordmark reveal.",
+      "orientation": "both",
+      "problem": "9.50: hard cut to logo; bridge becoming logo is not seen.",
+      "severity": "medium",
+      "time": "9.50"
+    },
+    {
+      "fix": "Punch-in to widget alone and enlarge slider and value readout.",
+      "orientation": "16:9",
+      "problem": "19.50: interactive lambda slider and values illegible.",
+      "severity": "medium",
+      "time": "19.50"
+    },
+    {
+      "fix": "Shorten copy and enlarge pill to one line minimum 28px.",
+      "orientation": "both",
+      "problem": "5.50: caption 'Those who don't learn to adapt risk being left behind.' long, tiny, wraps.",
+      "severity": "medium",
+      "time": "5.50"
+    },
+    {
+      "fix": "Move helper pills below title safe-area and enlarge.",
+      "orientation": "9:16",
+      "problem": "10.50: top labels hug/clip timestamp and screen edge.",
+      "severity": "low",
+      "time": "10.50"
+    }
+  ],
+  "overall": "Not ready: story works but app/graph proof is illegible, genuine footage is annotated, and logo payoff plus end-card need polish."
+}
